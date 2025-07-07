@@ -76,20 +76,33 @@ ros2 run reference_path_classifier classify_cones_by_side.py
 ### 1. Global Path Planning
 ## 🎥 Demo Videos
 
-## 🎥 Demo Videos
-
 <div align="center">
-  <img src="docs/images/1global_pathplanning.gif" width="45%"/>
-  <img src="docs/images/2globalcones_and_roi.gif" width="45%"/>
+  <div>
+    <img src="docs/images/1global_pathplanning.gif" width="45%"/><br>
+    <b>1. Global Path Planning</b>
+  </div>
+  <div>
+    <img src="docs/images/2globalcones_and_roi.gif" width="45%"/><br>
+    <b>2. Global Cones and ROI</b>
+  </div>
 </div>
 
 <div align="center">
-  <img src="docs/images/3rightleft_classification_using_frenet.gif" width="45%"/>
-  <img src="docs/images/4delaunay_triangulation.gif" width="45%"/>
+  <div>
+    <img src="docs/images/3rightleft_classification_using_frenet.gif" width="45%"/><br>
+    <b>3. Right/Left Classification using Frenet</b>
+  </div>
+  <div>
+    <img src="docs/images/4delaunay_triangulation.gif" width="45%"/><br>
+    <b>4. Delaunay Triangulation</b>
+  </div>
 </div>
 
 <div align="center">
-  <img src="docs/images/5interpolation_sampling.gif" width="45%"/>
+  <div>
+    <img src="docs/images/5interpolation_sampling.gif" width="45%"/><br>
+    <b>5. Interpolation and Sampling</b>
+  </div>
 </div>
 
 
