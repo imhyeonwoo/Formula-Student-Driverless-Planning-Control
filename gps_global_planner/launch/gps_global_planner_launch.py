@@ -8,8 +8,8 @@ import os
 
 def generate_launch_description():
     # ───────────────── 기준 좌표 파라미터 선언 ─────────────────
-    ref_lat_arg = DeclareLaunchArgument('ref_lat', default_value='37.5573749')
-    ref_lon_arg = DeclareLaunchArgument('ref_lon', default_value='127.0505869')
+    ref_lat_arg = DeclareLaunchArgument('ref_lat', default_value='37.54')
+    ref_lon_arg = DeclareLaunchArgument('ref_lon', default_value='127.077')
 
     ref_lat = LaunchConfiguration('ref_lat')
     ref_lon = LaunchConfiguration('ref_lon')
