@@ -111,8 +111,9 @@ ros2 run reference_path_classifier classify_cones_by_side.py
 |-----------------|------------------------|
 | OS              | Ubuntu 22.04           |
 | ROS             | ROS2 Humble            |
-| GPS RTK             | u-blox F9P            |
-| 언어            | Python 3.10 / C++17    |
+| GPS RTK Module            | u-blox F9P            |
+| IMU Module            | 미정            |
+| Languages            | Python 3.10 / C++17    |
 
 ---
 
