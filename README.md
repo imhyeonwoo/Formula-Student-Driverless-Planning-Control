@@ -7,7 +7,7 @@ ROS2 기반 **지상 차량(UGV) 경로 생성·추종** 전용 패키지 모음
 
 ## 📁 프로젝트 구조
 
-
+```
 Planning/
 ├── cones_no_color/ # 라바콘 기반 로컬 경로 생성
 │ ├── msg/ # ModifiedFloat32MultiArray.msg
@@ -78,14 +78,6 @@ ros2 run reference_path_classifier classify_cones_by_side.py
 ## 영상 설명
 
 ---
-
----
-
-### 🎥 전체 영상
-[![Full Video](https://img.youtube.com/vi/EWC01EeUu1A/0.jpg)](https://www.youtube.com/watch?v=EWC01EeUu1A)
-
-👉 [유튜브에서 보기](https://www.youtube.com/watch?v=EWC01EeUu1A)
-
 
 ## 🛠️ 개발 환경
 
