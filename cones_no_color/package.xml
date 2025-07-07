@@ -1,0 +1,29 @@
+<?xml version="1.0"?>
+<package format="3">
+  <name>cones_no_color</name>
+  <version>0.0.1</version>
+  <description>Visualises UKF-tracked cones from /fused_sorted_cones_ukf in RViz2.</description>
+
+  <maintainer email="ihw@example.com">ihw</maintainer>
+  <license>Apache-2.0</license>
+
+  <!-- ───────── 빌드 도구 ───────── -->
+  <buildtool_depend>ament_cmake</buildtool_depend>
+
+  <!-- ───────── 런타임·빌드 공통 의존성 ───────── -->
+  <depend>rclcpp</depend>
+  <depend>rclpy</depend>                 <!-- ★파이썬 노드 있을 때 필수 -->
+  <depend>std_msgs</depend>
+  <depend>sensor_msgs</depend>
+  <depend>geometry_msgs</depend>
+  <depend>visualization_msgs</depend>
+  <depend>custom_interface</depend>      <!-- TrackedConeArray 정의 패키지 -->
+
+  <!-- ───────── (옵션) 린트·테스트 ───────── -->
+  <test_depend>ament_lint_auto</test_depend>
+  <test_depend>ament_lint_common</test_depend>
+
+  <export>
+    <build_type>ament_cmake</build_type>
+  </export>
+</package>

@@ -1,0 +1,11 @@
+# 빌드 산출물
+build/
+install/
+log/
+*.o
+*.pyc
+__pycache__/
+# ROS2 colcon
+*colcon*
+# VSCode 설정
+.vscode/
