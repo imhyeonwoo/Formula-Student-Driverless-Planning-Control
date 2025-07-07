@@ -1,37 +1,44 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-cone_roi_publisher.py
+cone_roi_publisher.py  (updated 2025-07-07)
 
 • CSV의 WGS84 콘 절대좌표 → reference 평면(x,y) 변환
 • TF(reference→gps_antenna→os_sensor)로 os_sensor 상대좌표 계산
 • 전방 180°(x ≥ 0) & 반경 roi_radius 이내 콘만 선택
-• /sorted_cones_time  (ModifiedFloat32MultiArray) 로 (x,y,z=0) 3-tuple 퍼블리시  ★
-• /lidar_roi_marker   (visualization_msgs/Marker) 로 ROI 부채꼴 시각화
+• /sorted_cones_time (ModifiedFloat32MultiArray) 로 (x,y,z=0) 3-tuple 퍼블리시
+• /lidar_roi_marker  (visualization_msgs/Marker) 로 ROI 부채꼴 시각화
 """
 
-import math, os
+import math
+import os
 from typing import List, Tuple
 
+import numpy as np
+import pandas as pd
 import rclpy
-from rclpy.node import Node
 from rclpy.duration import Duration
+from rclpy.node import Node
+
 from ament_index_python.packages import get_package_share_directory
 
 from visualization_msgs.msg import Marker
+from std_msgs.msg import MultiArrayDimension, MultiArrayLayout
 from custom_interface.msg import ModifiedFloat32MultiArray
-
-import pandas as pd
-import numpy as np
 
 import tf2_ros
 import tf_transformations
 
+
+# ───────── 상수 ─────────
 R_EARTH = 6_378_137.0  # [m]
 
 
-def latlon_to_local(lat: float, lon: float,
-                    ref_lat: float, ref_lon: float) -> Tuple[float, float]:
+# ───────── 보조 함수 ─────────
+def latlon_to_local(
+    lat: float, lon: float,
+    ref_lat: float, ref_lon: float
+) -> Tuple[float, float]:
     lat_r, lon_r = math.radians(lat), math.radians(lon)
     ref_lat_r, ref_lon_r = math.radians(ref_lat), math.radians(ref_lon)
     x = (lon_r - ref_lon_r) * math.cos(ref_lat_r) * R_EARTH
@@ -39,24 +46,26 @@ def latlon_to_local(lat: float, lon: float,
     return x, y
 
 
+# ───────── 메인 노드 ─────────
 class ConeROIPublisher(Node):
     def __init__(self):
         super().__init__("cone_roi_publisher")
 
         # ────── 파라미터 ──────
         pkg_share = get_package_share_directory("gps_global_planner")
-        def_csv   = os.path.join(pkg_share, "data", "placed_cones_temp.csv")
-        self.declare_parameter("csv_file",    def_csv)
-        self.declare_parameter("ref_lat",     37.541274)
-        self.declare_parameter("ref_lon",     127.077796)
-        self.declare_parameter("roi_radius",  20.0)   # [m]
-        self.declare_parameter("timer_hz",    10.0)   # [Hz]
+        def_csv = os.path.join(pkg_share, "data", "placed_cones_temp.csv")
 
-        self.ref_lat  = self.get_parameter("ref_lat").value
-        self.ref_lon  = self.get_parameter("ref_lon").value
-        self.roi_R    = float(self.get_parameter("roi_radius").value)
-        csv_file      = self.get_parameter("csv_file").value
-        timer_hz      = float(self.get_parameter("timer_hz").value)
+        self.declare_parameter("csv_file", def_csv)
+        self.declare_parameter("ref_lat", 37.5573749)
+        self.declare_parameter("ref_lon", 127.0505869)
+        self.declare_parameter("roi_radius", 20.0)   # [m]
+        self.declare_parameter("timer_hz", 10.0)     # [Hz]
+
+        self.ref_lat = self.get_parameter("ref_lat").value
+        self.ref_lon = self.get_parameter("ref_lon").value
+        self.roi_R = float(self.get_parameter("roi_radius").value)
+        csv_file = self.get_parameter("csv_file").value
+        timer_hz = float(self.get_parameter("timer_hz").value)
 
         # ────── CSV 로드 ──────
         try:
@@ -69,9 +78,12 @@ class ConeROIPublisher(Node):
         lon_col = [c for c in df.columns if "lon" in c.lower()][0]
 
         self.cones_ref: List[Tuple[float, float]] = [
-            latlon_to_local(df.loc[i, lat_col],
-                            df.loc[i, lon_col],
-                            self.ref_lat, self.ref_lon)
+            latlon_to_local(
+                df.loc[i, lat_col],
+                df.loc[i, lon_col],
+                self.ref_lat,
+                self.ref_lon,
+            )
             for i in range(len(df))
         ]
         self.get_logger().info(f"{len(self.cones_ref)} 개 콘 로드 완료")
@@ -82,9 +94,9 @@ class ConeROIPublisher(Node):
 
         # ────── 퍼블리셔 ──────
         self.pub_cone = self.create_publisher(
-            ModifiedFloat32MultiArray, "/sorted_cones_time", 10)
-        self.pub_roi  = self.create_publisher(
-            Marker, "/lidar_roi_marker", 1)
+            ModifiedFloat32MultiArray, "/sorted_cones_time", 10
+        )
+        self.pub_roi = self.create_publisher(Marker, "/lidar_roi_marker", 1)
 
         # ────── 타이머 ──────
         self.create_timer(1.0 / timer_hz, self.timer_cb)
@@ -103,8 +115,8 @@ class ConeROIPublisher(Node):
         mk.color.r, mk.color.g, mk.color.b, mk.color.a = 0.0, 0.6, 1.0, 0.7
 
         R = self.roi_R
-        angles = np.linspace(-math.pi/2, math.pi/2, 36)
-        mk.points = [self._pt(R*math.cos(a), R*math.sin(a)) for a in angles]
+        angles = np.linspace(-math.pi / 2, math.pi / 2, 36)
+        mk.points = [self._pt(R * math.cos(a), R * math.sin(a)) for a in angles]
         mk.points.insert(0, self._pt(0.0, 0.0))
         mk.points.append(self._pt(0.0, 0.0))
         return mk
@@ -112,7 +124,9 @@ class ConeROIPublisher(Node):
     @staticmethod
     def _pt(x: float, y: float):
         from geometry_msgs.msg import Point
-        p = Point(); p.x, p.y, p.z = x, y, 0.0
+
+        p = Point()
+        p.x, p.y, p.z = x, y, 0.0
         return p
 
     # --------------------------------------------------------------
@@ -120,7 +134,8 @@ class ConeROIPublisher(Node):
         # TF(reference → os_sensor)
         try:
             tf = self.tf_buf.lookup_transform(
-                "reference", "os_sensor", rclpy.time.Time())
+                "reference", "os_sensor", rclpy.time.Time()
+            )
         except (tf2_ros.LookupException, tf2_ros.ExtrapolationException):
             self.get_logger().warn_once("TF(reference→os_sensor) 미획득…")
             return
@@ -129,32 +144,54 @@ class ConeROIPublisher(Node):
         q = tf.transform.rotation
         R = tf_transformations.quaternion_matrix([q.x, q.y, q.z, q.w])[:3, :3]
         t_vec = np.array([t.x, t.y, t.z])
-        RtT   = R.T                                   # 역회전
+        RtT = R.T  # 역회전 (world→sensor)
 
         # ROI 필터링
         rel_pts = []
         for cx, cy in self.cones_ref:
             p_ref = np.array([cx, cy, 0.0])
-            p_s   = RtT.dot(p_ref - t_vec)            # os_sensor 좌표
-            if p_s[0] < 0.0:               # 뒤쪽
+            p_s = RtT.dot(p_ref - t_vec)  # os_sensor 좌표
+            if p_s[0] < 0.0:  # 뒤쪽
                 continue
             dist = np.hypot(p_s[0], p_s[1])
             if dist > self.roi_R:
                 continue
             rel_pts.append((p_s[0], p_s[1], dist))
 
-        rel_pts.sort(key=lambda x: x[2])              # 거리순 정렬
+        rel_pts.sort(key=lambda x: x[2])  # 거리순 정렬
+        self.get_logger().debug(f"ROI cones: {len(rel_pts)}")
 
-        # ModifiedFloat32MultiArray (x,y,z=0) 3-tuple ★
+        # ───── ModifiedFloat32MultiArray 작성 ─────
         msg = ModifiedFloat32MultiArray()
-        msg.data = [coord
-                    for (x, y, _) in rel_pts
-                    for coord in (float(x), float(y), 0.0)]   # ★ z=0 추가
+
+        # Header
+        msg.header.stamp = self.get_clock().now().to_msg()
+        msg.header.frame_id = "os_sensor"
+
+        # Data (x,y,z=0) 3-tuple 반복
+        msg.data = [
+            coord for (x, y, _) in rel_pts for coord in (float(x), float(y), 0.0)
+        ]
+
+        # class_names (색상 안 쓰므로 'cone' 통일)
+        n_cones = len(rel_pts)
+        msg.class_names = ["Unknown"] * n_cones
+
+        # Layout: 2차원 [cones] × [xyz]
+        dim_cone = MultiArrayDimension(
+            label="cones", size=n_cones, stride=3 * n_cones
+        )
+        dim_xyz = MultiArrayDimension(label="xyz", size=3, stride=3)
+        msg.layout = MultiArrayLayout(
+            dim=[dim_cone, dim_xyz],
+            data_offset=0,
+        )
+
         self.pub_cone.publish(msg)
 
         # ROI 마커 time stamp 업데이트
         roi_mk = self._roi_marker_template
-        roi_mk.header.stamp = self.get_clock().now().to_msg()
+        roi_mk.header.stamp = msg.header.stamp
         self.pub_roi.publish(roi_mk)
 
 
