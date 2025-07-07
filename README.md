@@ -7,7 +7,7 @@ ROS2 기반 **지상 차량(UGV) 경로 생성·추종** 전용 패키지 모음
 
 ## 📁 프로젝트 구조
 
-```
+
 Planning/
 ├── cones_no_color/ # 라바콘 기반 로컬 경로 생성
 │ ├── msg/ # ModifiedFloat32MultiArray.msg
