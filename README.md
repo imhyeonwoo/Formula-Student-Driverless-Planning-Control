@@ -28,7 +28,7 @@ Planning/
 │ ├── local_cartesian_path_publisher.cpp
 │ ├── status_colored_path_publisher.cpp
 │ └── vehicle_tf_broadcaster.cpp
-└── reference_path_classifier/ # 라바콘 좌·우측 분류기
+└── reference_path_classifier/ # Classifies cones into left and right sides
 └── scripts/
 └── classify_cones_by_side.py
 ```
