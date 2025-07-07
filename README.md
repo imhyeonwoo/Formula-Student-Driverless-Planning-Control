@@ -73,7 +73,6 @@ ros2 run reference_path_classifier classify_cones_by_side.py
 
 ### 🚗 Demo Video
 
-👉 [Watch on YouTube]([https://www.youtube.com/watch?v=iVzSpW8ZjFI](https://youtu.be/qMMXWr9FITQ))
 
 ## About the Demo
 
@@ -90,14 +89,14 @@ ros2 run reference_path_classifier classify_cones_by_side.py
 
 ---
 
-## 🔗 참고 자료
+## 🔗 References
 
 - [ROS2 Official Documentation](https://docs.ros.org/en/humble/)
 - [MathWorks Blog: Path Planning for Formula Student Driverless Cars](https://blogs.mathworks.com/student-lounge/2022/10/03/path-planning-for-formula-student-driverless-cars-using-delaunay-triangulation/?from=kr)
 
 ---
 
-## 🤝 기여 및 문의
+## 🤝 Contributions & Contact
 
 - imhyeonwoo21@gmail.com
 - imhyeonwoo21@konkuk.ac.kr
