@@ -7,29 +7,27 @@ import os
 
 
 def generate_launch_description():
-    # ───────────────── 기준 좌표 파라미터 선언
-    # 127.0505869,37.5573749
+    # ───────────────── 기준 좌표 파라미터 선언 ─────────────────
     ref_lat_arg = DeclareLaunchArgument('ref_lat', default_value='37.5573749')
     ref_lon_arg = DeclareLaunchArgument('ref_lon', default_value='127.0505869')
-    # ref_lat_arg = DeclareLaunchArgument('ref_lat', default_value='37.54995')
-    # ref_lon_arg = DeclareLaunchArgument('ref_lon', default_value='127.05485')
 
     ref_lat = LaunchConfiguration('ref_lat')
     ref_lon = LaunchConfiguration('ref_lon')
 
-    # ───────────────── CSV 기본 경로 구성
+    # ───────────────── CSV 기본 경로 구성 ───────────────────────
     csv_default = os.path.join(
         get_package_share_directory('gps_global_planner'),
         'data', 'nocheon_250613_curved_rtk_1.csv'
     )
 
-    csv_arg = DeclareLaunchArgument(
-        'csv_file',
-        default_value=csv_default
-    )
-    csv_file = LaunchConfiguration('csv_file')
+    csv_arg      = DeclareLaunchArgument('csv_file', default_value=csv_default)
+    csv_file     = LaunchConfiguration('csv_file')
 
-    # ───────────────── 노드들 선언
+    # ★ covariance threshold 파라미터 추가 (기본 0.0002)
+    cov_thr_arg  = DeclareLaunchArgument('cov_threshold', default_value='0.0000001')
+    cov_threshold = LaunchConfiguration('cov_threshold')
+
+    # ───────────────── 노드들 선언 ───────────────────────────────
     gps_to_local = Node(
         package='gps_global_planner',
         executable='gps_to_local_cartesian_node',
@@ -45,9 +43,11 @@ def generate_launch_description():
         executable='status_colored_path_publisher_node',
         name='status_colored_path_publisher',
         parameters=[{
-            'csv_filename': csv_file,
-            'ref_lat': ref_lat,
-            'ref_lon': ref_lon
+            'csv_filename'  : csv_file,
+            'ref_lat'       : ref_lat,
+            'ref_lon'       : ref_lon,
+            # ★ threshold 전달
+            'cov_threshold' : cov_threshold
         }]
     )
 
@@ -58,7 +58,8 @@ def generate_launch_description():
     )
 
     return LaunchDescription([
-        ref_lat_arg, ref_lon_arg, csv_arg,
+        ref_lat_arg, ref_lon_arg,
+        csv_arg, cov_thr_arg,          # ★ LaunchDescription에 추가
         gps_to_local,
         path_marker,
         tf_broadcaster

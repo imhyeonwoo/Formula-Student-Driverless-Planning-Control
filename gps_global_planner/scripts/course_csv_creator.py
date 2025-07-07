@@ -1,11 +1,12 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-course_csv_creator.py
-────────────────────────────────────────────────────────────
+course_csv_creator.py   (updated 2025-07-07)
+
 ROS 2 bag → CSV 변환 스크립트
  - input  : /ublox_gps_node/fix  (sensor_msgs/msg/NavSatFix)
- - output : index, Long, Lat, UTM_X, UTM_Y, Status
+ - output : index, Long, Lat, UTM_X, UTM_Y, Cov00
+            └─ Cov00 = position_covariance[0]  ← 기존 Status 대신
 """
 
 import os
@@ -57,7 +58,8 @@ def create_course_csv_ros2(bag_uri: str, csv_path: str) -> None:
     # 3) CSV 작성 -------------------------------------------------------
     with open(csv_path, "w", newline="") as f:
         writer = csv.writer(f)
-        writer.writerow(["index", "Long", "Lat", "UTM_X", "UTM_Y", "Status"])
+        # ★ Header: Status → Cov00 로 변경
+        writer.writerow(["index", "Long", "Lat", "UTM_X", "UTM_Y", "Cov00"])
 
         idx = 0
         while reader.has_next():
@@ -67,7 +69,8 @@ def create_course_csv_ros2(bag_uri: str, csv_path: str) -> None:
 
             msg_obj: MsgClass = deserialize_message(raw, MsgClass)
             lat, lon = msg_obj.latitude, msg_obj.longitude
-            status   = int(msg_obj.status.status)   # RTK Fix 등
+            # ★ Status 대신 공분산[0] 사용
+            cov00    = float(msg_obj.position_covariance[0])
 
             try:
                 easting, northing, *_ = utm.from_latlon(lat, lon)
@@ -75,7 +78,8 @@ def create_course_csv_ros2(bag_uri: str, csv_path: str) -> None:
                 log.warning(f"UTM 변환 실패(idx={idx}): {e}")
                 continue
 
-            writer.writerow([idx, lon, lat, easting, northing, status])
+            # ★ cov00 저장
+            writer.writerow([idx, lon, lat, easting, northing, cov00])
             idx += 1
 
     log.info(f"CSV 생성 완료: {csv_path}  (총 {idx} 샘플)")

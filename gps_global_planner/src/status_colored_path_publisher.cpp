@@ -18,6 +18,7 @@ using visualization_msgs::msg::Marker;
 /* 지구 반경 [m] */
 constexpr double R_EARTH = 6'378'137.0;
 
+/* 위·경도 → 기준 평면(x,y) */
 static inline std::pair<double,double> latlon_to_local(
     double lat, double lon, double ref_lat, double ref_lon)
 {
@@ -28,7 +29,8 @@ static inline std::pair<double,double> latlon_to_local(
   return {x, y};
 }
 
-struct CSVRow { double x, y; int status; };
+/* CSV 1행 보관 구조체 */
+struct CSVRow { double x, y; double cov; };   // ← status → cov(double) 로 변경
 
 class StatusColoredPathPublisher : public rclcpp::Node
 {
@@ -41,15 +43,17 @@ public:
       ament_index_cpp::get_package_share_directory("gps_global_planner") +
       "/data/ahrs3.csv";
 
-    declare_parameter("csv_filename", def_csv);
-    declare_parameter("min_distance", 0.3);
-    declare_parameter("ref_lat",      37.54995);
-    declare_parameter("ref_lon",      127.05485);
+    declare_parameter("csv_filename",  def_csv);
+    declare_parameter("min_distance",  0.3);
+    declare_parameter("ref_lat",       37.54995);
+    declare_parameter("ref_lon",       127.05485);
+    declare_parameter("cov_threshold", 0.0002);          // ★ 추가
 
-    csv_file_ = get_parameter("csv_filename").as_string();
-    min_dist_ = get_parameter("min_distance").as_double();
-    ref_lat_  = get_parameter("ref_lat").as_double();
-    ref_lon_  = get_parameter("ref_lon").as_double();
+    csv_file_      = get_parameter("csv_filename").as_string();
+    min_dist_      = get_parameter("min_distance").as_double();
+    ref_lat_       = get_parameter("ref_lat").as_double();
+    ref_lon_       = get_parameter("ref_lon").as_double();
+    cov_threshold_ = get_parameter("cov_threshold").as_double();
 
     /* CSV 파싱 → pts_ */
     load_csv();
@@ -63,7 +67,7 @@ public:
   }
 
 private:
-  /* CSV: index,Long,Lat,UTM_X,UTM_Y,Status */
+  /* CSV: index,Long,Lat,UTM_X,UTM_Y,Cov00 */
   void load_csv()
   {
     std::ifstream fin(csv_file_);
@@ -71,24 +75,25 @@ private:
       RCLCPP_ERROR(get_logger(), "CSV not found: %s", csv_file_.c_str());
       return;
     }
-    std::string line; std::getline(fin, line); // header
+    std::string line; std::getline(fin, line); // header line skip
     while (std::getline(fin, line))
     {
       std::stringstream ss(line);
       std::vector<std::string> c; std::string s;
       while (std::getline(ss, s, ',')) c.push_back(s);
-      if (c.size() < 6) continue;
+      if (c.size() < 6) continue;              // 필드 부족 skip
       try {
-        double lon = std::stod(c[1]), lat = std::stod(c[2]);
-        int    st  = std::stoi(c[5]);
-        auto [x,y] = latlon_to_local(lat, lon, ref_lat_, ref_lon_);
-        pts_.push_back({x,y,st});
+        double lon  = std::stod(c[1]);
+        double lat  = std::stod(c[2]);
+        double cov  = std::stod(c[5]);         // ★ Cov00
+        auto [x,y]  = latlon_to_local(lat, lon, ref_lat_, ref_lon_);
+        pts_.push_back({x,y,cov});
       } catch (...) { continue; }
     }
     RCLCPP_INFO(get_logger(), "CSV rows loaded: %lu", pts_.size());
   }
 
-  /* 최소 거리 필터 (모든 status 포함, 포인트 밀집도만 줄임) */
+  /* 최소 거리 필터 (공분산 상관없이 간격만 조정) */
   void filter_distance()
   {
     if (pts_.empty()) return;
@@ -107,28 +112,31 @@ private:
     Marker mk;
     mk.header.stamp    = now();
     mk.header.frame_id = "reference";
-    mk.ns   = "status_path"; mk.id = 0;
+    mk.ns   = "cov_path"; mk.id = 0;
     mk.type = Marker::LINE_STRIP; mk.action = Marker::ADD;
-    mk.scale.x = 0.25;         // 선 굵기
+    mk.scale.x = 0.1;                       // 선 두께
 
     for (auto &p : pts_)
     {
+      /* 좌표 */
       Point pt; pt.x = p.x; pt.y = p.y; pt.z = 0.0;
       mk.points.push_back(pt);
 
+      /* 색상 결정: cov > threshold → red, else green */
       ColorRGBA col;
-      if (p.status == 2) {           // RTK Fix → green
-        col.r = 0.0; col.g = 1.0; col.b = 0.0; col.a = 1.0;
-      } else {                       // 기타 → red
+      if (p.cov > cov_threshold_) {          // 빨간색 (정확도 낮음)
         col.r = 1.0; col.g = 0.0; col.b = 0.0; col.a = 1.0;
+      } else {                               // 초록색 (정확도 양호)
+        col.r = 0.0; col.g = 1.0; col.b = 0.0; col.a = 1.0;
       }
       mk.colors.push_back(col);
     }
     marker_pub_->publish(mk);
   }
 
-  /* 멤버 */
-  std::string csv_file_; double min_dist_, ref_lat_, ref_lon_;
+  /* 멤버 변수 */
+  std::string csv_file_;
+  double min_dist_, ref_lat_, ref_lon_, cov_threshold_;
   std::vector<CSVRow> pts_;
 
   rclcpp::Publisher<Marker>::SharedPtr marker_pub_;
