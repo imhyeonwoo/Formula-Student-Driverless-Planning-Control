@@ -35,9 +35,9 @@ Planning/
 
 ---
 
-## 주요 기능
+## Key Features
 
-| 패키지 | 핵심 기능 | 언어 |
+| Package | Main Functions | Language |
 |--------|-----------|------|
 | **cones_no_color** | • Generates an optimal reference path from cone locations<br>• Provides RViz visualization nodes | Python |
 | **gps_global_planner** | • Converts RTK-GPS logs to CSV and nav_msgs/Path<br>• ENU ↔️ Local Cartesian conversion<br>• Colors the global path by state and speed | C++, Python |
@@ -48,7 +48,7 @@ Planning/
 ## ⚙️ Usage
 - To observe the vehicle hovering at each waypoint before driving the full course, refer to How To Play.txt.
 
-### 🔧 빌드 (ROS2 Humble)
+### 🔧 Build (ROS2 Humble)
 
 ```bash
 cd [workspace path]
