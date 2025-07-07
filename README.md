@@ -71,10 +71,7 @@ ros2 run cones_no_color reference_path_planning.py
 ros2 run reference_path_classifier classify_cones_by_side.py
 ```
 
-### 🚗 Demo Video
-
-### 1. Global Path Planning
-## 🎥 Demo Videos
+### 🎥 Demo Video
 
 <table>
   <tr>
