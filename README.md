@@ -48,7 +48,7 @@ Planning/
 ## ⚙️ Usage
 - To observe the vehicle hovering at each waypoint before driving the full course, refer to How To Play.txt.
 
-### 🔧 빌드 (ROS2 기준)
+### 🔧 빌드 (ROS2 Humble)
 
 ```bash
 cd [workspace path]
