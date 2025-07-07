@@ -4,37 +4,36 @@
   <version>0.0.1</version>
   <description>
     Classifies detected cones as left/right of the reference global path
-    and publishes them as RViz markers (left: green, right: red).
+    and publishes them as RViz markers (left: blue, right: yellow).
   </description>
 
-  <!-- One line licence identifier (e.g. Apache-2.0, MIT, BSD-3-Clause) -->
-  <license>Apache-2.0</license>
-
-  <!-- Maintainer: 이름·이메일을 꼭 수정하세요 -->
   <maintainer email="your_email@example.com">Your Name</maintainer>
+  <license>Apache-2.0</license>
 
   <!-- 빌드 도구 -->
   <buildtool_depend>ament_cmake</buildtool_depend>
 
-  <!-- 빌드 시 필요 (C++ 노드 추가 대비 포함) -->
-  <build_depend>rclpy</build_depend>
+  <!-- 빌드 시 필요한 의존성 -->
+  <build_depend>rclcpp</build_depend>
   <build_depend>tf2_ros</build_depend>
   <build_depend>visualization_msgs</build_depend>
-  <build_depend>builtin_interfaces</build_depend>
+  <build_depend>geometry_msgs</build_depend>
   <build_depend>custom_interface</build_depend>
+  <build_depend>eigen3_cmake_module</build_depend>
+  <build_depend>Eigen3</build_depend>
 
-  <!-- 실행 시 필요 -->
-  <exec_depend>rclpy</exec_depend>
+  <!-- 실행 시 필요한 의존성 -->
+  <exec_depend>rclcpp</exec_depend>
   <exec_depend>tf2_ros</exec_depend>
   <exec_depend>visualization_msgs</exec_depend>
-  <exec_depend>builtin_interfaces</exec_depend>
+  <exec_depend>geometry_msgs</exec_depend>
   <exec_depend>custom_interface</exec_depend>
 
-  <!-- 선택: 테스트·품질 검사 패키지 -->
+  <!-- 테스트 옵션 -->
   <test_depend>ament_lint_auto</test_depend>
   <test_depend>ament_lint_common</test_depend>
 
-  <!-- Python entry-points를 자동 설치하려면 필요 -->
+  <!-- 빌드 타입 -->
   <export>
     <build_type>ament_cmake</build_type>
   </export>
