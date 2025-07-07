@@ -5,7 +5,7 @@ This repository manages my personal work for the Planning / Control team in the 
 
 ```markdown
 
-## 📁 프로젝트 구조
+## 📁 Project Structure
 
 
 Planning/
