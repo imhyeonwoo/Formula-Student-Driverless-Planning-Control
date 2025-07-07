@@ -73,6 +73,20 @@ ros2 run reference_path_classifier classify_cones_by_side.py
 
 ### 🚗 Demo Video
 
+### 1. Global Path Planning
+![Global Path Planning](docs/images/1global_pathplanning.gif)
+
+### 2. Global Cones and ROI
+![Global Cones and ROI](docs/images/2globalcones_and_roi.gif)
+
+### 3. Right/Left Classification using Frenet
+![Right/Left Classification](docs/images/3rightleft_classification_using_frenet.gif)
+
+### 4. Delaunay Triangulation
+![Delaunay Triangulation](docs/images/4delaunay_triangulation.gif)
+
+### 5. Interpolation and Sampling
+![Interpolation and Sampling](docs/images/5interpolation_sampling.gif)
 
 ## About the Demo
 
