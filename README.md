@@ -5,7 +5,7 @@ This repository manages my personal work for the **Planning / Control Team** in 
 
 ```markdown
 
-## 📁 Project Structure
+## Project Structure
 
 
 Planning/
@@ -45,10 +45,10 @@ Planning/
 
 ---
 
-## ⚙️ Usage
+## Usage
 - To observe the vehicle hovering at each waypoint before driving the full course, refer to How To Play.txt.
 
-### 🔧 Build (ROS2 Humble)
+### Build (ROS2 Humble)
 
 ```bash
 cd [workspace path]
@@ -58,7 +58,7 @@ source install/setup.bash
 - Use --symlink-install for immediate reflection of source code changes in the install directory.
 - Use -DCMAKE_BUILD_TYPE=Release for optimized execution performance.
 
-### 🚀 Example Execution
+### Example Execution
 
 ```bash
 # 1) Generate and publish the GPS-based global path
@@ -71,7 +71,7 @@ ros2 run cones_no_color reference_path_planning.py
 ros2 run reference_path_classifier classify_cones_by_side.py
 ```
 
-### 🎥 Demo Video
+### Demo Video
 
 <table>
   <tr>
@@ -105,7 +105,7 @@ ros2 run reference_path_classifier classify_cones_by_side.py
 
 ---
 
-## 🛠️ Development Environment
+## Development Environment
 
 | Item            | Version / Tool               |
 |-----------------|------------------------|
@@ -117,7 +117,7 @@ ros2 run reference_path_classifier classify_cones_by_side.py
 
 ---
 
-## 🔗 References
+## References
 
 - [ROS2 Official Documentation](https://docs.ros.org/en/humble/)
 - [MathWorks Blog: Path Planning for Formula Student Driverless Cars](https://blogs.mathworks.com/student-lounge/2022/10/03/path-planning-for-formula-student-driverless-cars-using-delaunay-triangulation/?from=kr)
@@ -125,7 +125,7 @@ ros2 run reference_path_classifier classify_cones_by_side.py
 - [u-blox F9P Interface Description (Documentation)](https://content.u-blox.com/sites/default/files/documents/u-blox-F9-HPG-1.32_InterfaceDescription_UBX-22008968.pdf)
 ---
 
-## 🤝 Contributions & Contact
+## Contributions & Contact
 
 - imhyeonwoo21@gmail.com
 - imhyeonwoo21@konkuk.ac.kr
