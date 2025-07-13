@@ -1,7 +1,7 @@
 # 🛣️ StudentMobilityCompetition-Planning-Control
 
-A collection of ROS2 packages dedicated to **Path Planning and Tracking** for a custom-built EV Autonomous Vehicle.  
-This repository manages my personal work for the **Planning / Control Team** in the Student Mobility Competition (Konkuk University - Team K.A.I.).
+A collection of ROS2 packages dedicated to **Path/Speed Planning and Tracking** for a custom-built EV Autonomous Vehicle.  
+This repository manages my personal work for the **Planning / (High-Level)Control Team** in the Student Mobility Competition (Konkuk University - Team K.A.I.).
 
 ```markdown
 
