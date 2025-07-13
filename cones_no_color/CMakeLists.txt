@@ -33,6 +33,7 @@ find_package(custom_interface REQUIRED)     # TrackedConeArray 가 들어있는 
 install(PROGRAMS
   scripts/visualize_cones.py          # ★새 .py 파일 추가 시 여기에 열거
   scripts/reference_path_planning.py
+  scripts/cone_safe_zone.py
   DESTINATION lib/${PROJECT_NAME})
 
 # -------------------- C++ 바이너리 설치 ----------------
