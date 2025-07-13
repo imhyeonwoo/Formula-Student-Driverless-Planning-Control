@@ -100,7 +100,7 @@ ros2 run reference_path_classifier classify_cones_by_side.py
       <b>5. Interpolation and Sampling</b>
     </td>
     <td align="center">
-      <img src="docs/images/5interpolation_sampling.gif" width="45%"/><br>
+      <img src="docs/images/6cone_radius_safe_zone.gif" width="45%"/><br>
       <b>6. Obstacle Radius and Visualize Safe Zone</b>
     </td>
   </tr>
