@@ -1,0 +1,23 @@
+<?xml version="1.0"?>
+<package format="3">
+  <name>speed_planning</name>
+  <version>0.0.1</version>
+  <description>Curvature-based speed planning node.</description>
+
+  <maintainer email="your_email@example.com">Your Name</maintainer>
+  <license>Apache-2.0</license>
+
+  <buildtool_depend>ament_cmake</buildtool_depend>
+
+  <!-- Build & exec deps -->
+  <depend>rclcpp</depend>
+  <depend>std_msgs</depend>
+  <depend>geometry_msgs</depend>
+  <depend>visualization_msgs</depend>
+  <depend>nav_msgs</depend>
+  <depend>Eigen3</depend>
+
+  <export>
+    <build_type>ament_cmake</build_type>
+  </export>
+</package>
