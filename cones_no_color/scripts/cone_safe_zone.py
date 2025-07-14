@@ -27,7 +27,7 @@ class ConeSafeZone(Node):
         # ─ Parameters ─────────────────────────────────────────
         self.declare_parameter("reference_frame", "reference")
         self.declare_parameter("sensor_frame",    "os_sensor")
-        self.declare_parameter("default_radius",   0.8)
+        self.declare_parameter("default_radius",   1.2)
         self.declare_parameter("corridor_res",       120)
         self.declare_parameter("lifetime_sec",      0.30)
 
