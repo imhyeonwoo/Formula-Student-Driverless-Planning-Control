@@ -133,4 +133,3 @@ ros2 run reference_path_classifier classify_cones_by_side.py
 
 - imhyeonwoo21@gmail.com
 - imhyeonwoo21@konkuk.ac.kr
-```
