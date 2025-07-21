@@ -22,7 +22,7 @@ class GlobalYawEstimator(Node):
         self.alpha = self.declare_parameter('alpha', 0.2).value
 
         self.pub_raw = self.create_publisher(Float32, 'raw_global_yaw_only', 10)
-        self.pub_filt = self.create_publisher(Float32, 'global_yaw_gps_only', 10)
+        self.pub_filt = self.create_publisher(Float32, 'global_yaw', 10)
         self.create_subscription(PointStamped, 'local_xy', self.cb_xy, 10)
         self.get_logger().info('GlobalYawEstimator started (subscribe local_xy)')
 
