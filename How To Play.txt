@@ -1,6 +1,7 @@
 ros2 launch gps_global_planner gps_global_planner_launch.py
 
 ros2 run gps_global_planner global_yaw_estimator_node.py
+-> 이게 아닌 GPS+IMU를 Kalman Filter를 사용한 Fusion -> odometry data를 사용할 예정...on work
 
 - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 ros2 run gps_global_planner publish_global_cones.py
