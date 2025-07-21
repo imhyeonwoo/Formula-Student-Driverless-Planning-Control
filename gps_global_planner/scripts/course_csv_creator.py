@@ -26,8 +26,8 @@ PKG_SRC_DIR = "/home/ihw/workspace/kai_2025/src/Planning/gps_global_planner"
 DATA_DIR    = os.path.join(PKG_SRC_DIR, "data")
 os.makedirs(DATA_DIR, exist_ok=True)
 
-BAG_URI_DEFAULT = "/home/ihw/workspace/bag/nocheon_rtk_curved_250613/nocheon_250613_curved_rtk_1"
-CSV_OUT_DEFAULT = os.path.join(DATA_DIR, "nocheon_250613_curved_rtk_1.csv")
+BAG_URI_DEFAULT = "/home/ihw/workspace/bag/gps_imu_car/ilgam_250721"
+CSV_OUT_DEFAULT = os.path.join(DATA_DIR, "ilgam_250721.csv")
 TOPIC_NAME      = "/ublox_gps_node/fix"
 
 # ======================================================================

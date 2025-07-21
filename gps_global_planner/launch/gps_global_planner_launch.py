@@ -8,8 +8,12 @@ import os
 
 def generate_launch_description():
     # ───────────────── 기준 좌표 파라미터 선언 ─────────────────
-    ref_lat_arg = DeclareLaunchArgument('ref_lat', default_value='37.54')
-    ref_lon_arg = DeclareLaunchArgument('ref_lon', default_value='127.077')
+    # konkuk_250721 : 37.542109, 127.078148
+    # administartor_250721 : 37.543116, 127.076076
+    # engineering_250721 : 37.541591, 127.079700
+    ref_lat_arg = DeclareLaunchArgument('ref_lat', default_value='37.542109')
+    ref_lon_arg = DeclareLaunchArgument('ref_lon', default_value='127.078148')
+    # 여기서 ref lat/lon 수정 시 -> publish_global_cones.py에서도 동일하게 수정 필요
 
     ref_lat = LaunchConfiguration('ref_lat')
     ref_lon = LaunchConfiguration('ref_lon')
@@ -17,14 +21,14 @@ def generate_launch_description():
     # ───────────────── CSV 기본 경로 구성 ───────────────────────
     csv_default = os.path.join(
         get_package_share_directory('gps_global_planner'),
-        'data', 'nocheon_250613_curved_rtk_1.csv'
+        'data', 'konkuk_250721.csv'
     )
 
     csv_arg      = DeclareLaunchArgument('csv_file', default_value=csv_default)
     csv_file     = LaunchConfiguration('csv_file')
 
     # ★ covariance threshold 파라미터 추가 (기본 0.0002)
-    cov_thr_arg  = DeclareLaunchArgument('cov_threshold', default_value='0.00019600000000000002')
+    cov_thr_arg  = DeclareLaunchArgument('cov_threshold', default_value='0.01')
     cov_threshold = LaunchConfiguration('cov_threshold')
 
     # ───────────────── 노드들 선언 ───────────────────────────────
