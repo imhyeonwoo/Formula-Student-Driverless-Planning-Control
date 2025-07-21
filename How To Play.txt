@@ -2,11 +2,14 @@ ros2 launch gps_global_planner gps_global_planner_launch.py
 
 ros2 run gps_global_planner global_yaw_estimator_node.py
 
+- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 ros2 run gps_global_planner publish_global_cones.py
 
 ros2 run gps_global_planner cone_roi_publisher.py
 -> gps_global_planner_launch.py의 ref lat/lon과 같게 맞추어야함!
 -> /sorted_cones_time을 publish하기 위한 노드이므로 인지와 연결 시에는 필요 없음
+- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
 ---------------------------------------------------------------
 
 local 경로 생성을 위해 색상 정보 및 ekf tracking 안되어 있는 콘 토픽인 /sorted_cones_time 시각화하기
