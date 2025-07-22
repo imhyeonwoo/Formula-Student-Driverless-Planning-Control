@@ -5,7 +5,7 @@
   <description>Global-path &amp; cone utilities (GPS→local, TF, ROI cones etc.).</description>
 
   <!-- 유지보수자와 라이선스는 프로젝트에 맞게 수정 -->
-  <maintainer email="you@example.com">Your Name</maintainer>
+  <maintainer email="imhyeonwoo21@gmail.com">Your Name</maintainer>
   <license>Apache-2.0</license>
 
   <!-- build tool -->

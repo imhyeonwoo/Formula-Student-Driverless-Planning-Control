@@ -4,7 +4,7 @@
   <version>0.0.1</version>
   <description>Visualises UKF-tracked cones from /fused_sorted_cones_ukf in RViz2.</description>
 
-  <maintainer email="ihw@example.com">ihw</maintainer>
+  <maintainer email="imhyeonwoo21@gmail.com">ihw</maintainer>
   <license>Apache-2.0</license>
 
   <!-- ───────── 빌드 도구 ───────── -->

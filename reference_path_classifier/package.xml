@@ -7,7 +7,7 @@
     and publishes them as RViz markers (left: blue, right: yellow).
   </description>
 
-  <maintainer email="your_email@example.com">Your Name</maintainer>
+  <maintainer email="imhyeonwoo21@gmail.com">Your Name</maintainer>
   <license>Apache-2.0</license>
 
   <!-- 빌드 도구 -->
