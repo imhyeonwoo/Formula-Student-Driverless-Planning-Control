@@ -27,9 +27,9 @@ DATA_DIR    = os.path.join(PKG_SRC_DIR, "data")
 os.makedirs(DATA_DIR, exist_ok=True)
 
 # BAG_URI_DEFAULT = "/home/ihw/workspace/bag/gps_imu_car/ilgam_250721"
-BAG_URI_DEFAULT = "/home/ihw/workspace/bag/4planning_250613_rtk_curved/4planning_250613_rtk_curved"
+BAG_URI_DEFAULT = "/home/ihw/workspace/bag/4planning_250722_nocheon_rtk_curved"
 # CSV_OUT_DEFAULT = os.path.join(DATA_DIR, "ilgam_250721.csv")
-CSV_OUT_DEFAULT = os.path.join(DATA_DIR, "4planning_250613_rtk_curved.csv")
+CSV_OUT_DEFAULT = os.path.join(DATA_DIR, "4planning_250722_nocheon_rtk_curved.csv")
 TOPIC_NAME      = "/ublox_gps_node/fix"
 
 # ======================================================================
