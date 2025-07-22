@@ -4,7 +4,7 @@
   <version>0.0.1</version>
   <description>Curvature-based speed planning node.</description>
 
-  <maintainer email="your_email@example.com">Your Name</maintainer>
+  <maintainer email="imhyeonwoo21@gmail.com">ihw</maintainer>
   <license>Apache-2.0</license>
 
   <buildtool_depend>ament_cmake</buildtool_depend>
