@@ -28,8 +28,8 @@ def generate_launch_description():
     csv_arg      = DeclareLaunchArgument('csv_file', default_value=csv_default)
     csv_file     = LaunchConfiguration('csv_file')
 
-    # ★ covariance threshold 파라미터 추가 (기본 0.0002)
-    cov_thr_arg  = DeclareLaunchArgument('cov_threshold', default_value='0.01')
+    # ★ covariance threshold 파라미터 추가 (기본 0.0025 -> 5cm)
+    cov_thr_arg  = DeclareLaunchArgument('cov_threshold', default_value='0.0025')
     cov_threshold = LaunchConfiguration('cov_threshold')
 
     # ───────────────── 노드들 선언 ───────────────────────────────
