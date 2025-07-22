@@ -3,10 +3,11 @@
 """
 reference_path_planning.py
 ─────────────────────────────────────────────────────────────
-• 좌우 콘으로 로컬 참조 경로 생성
+• 좌우 콘 → Delaunay 내부선 중점 → B-spline → 등간격 샘플로
+  로컬 참조 경로( /final_waypoints ) 생성
 • speed_planner 노드가 보내는 /desired_speed_profile 을 받아
   Waypoint.speed 를 갱신해 속도 막대(height=z) 시각화
-(2025-07-09  - speed-profile 연동 버전)
+(2025-07-22  - Delaunay-midpoint 기반 버전)
 """
 
 import math
@@ -99,6 +100,63 @@ class ReferencePathPlanner(Node):
             self.publish_waypoints(self.latest_wps, now)
 
     # ==========================================================
+    # ── NEW: Delaunay 내부선 중점 추출 ─────────────────────────
+    @staticmethod
+    def delaunay_midpoints(left_s: List[Tuple[float, float]],
+                           right_s: List[Tuple[float, float]]):
+        """
+        sensor 좌표계의 좌·우 포인트 → 내부선 중점 (N×2 ndarray)
+        좌↔우를 잇는 Edge 만 남긴 뒤, 최근접-이웃 순서로 정렬
+        """
+        pts = np.array(left_s + right_s, float)
+        if len(pts) < 3:
+            return np.empty((0, 2))
+
+        tri = Delaunay(pts)
+        lN  = len(left_s)
+        mids = []
+
+        for s in tri.simplices:
+            for a, b in ((s[0], s[1]), (s[1], s[2]), (s[2], s[0])):
+                if (a < lN) != (b < lN):               # 좌 ↔ 우만
+                    mids.append([(pts[a, 0] + pts[b, 0]) * 0.5,
+                                 (pts[a, 1] + pts[b, 1]) * 0.5])
+
+        if len(mids) < 3:
+            return np.empty((0, 2))
+        mids = np.array(mids, float)
+
+        # ── 최근접-이웃으로 '적당한' 순서 정렬 ───────────────
+        unvis = set(range(len(mids)))
+        order = []
+        cur   = int(np.argmin(mids[:, 0]))      # 가장 x 작은 점부터
+        while unvis:
+            order.append(cur)
+            unvis.discard(cur)
+            if not unvis:
+                break
+            dist = ((mids[list(unvis)] - mids[cur])**2).sum(1)
+            cur  = list(unvis)[int(np.argmin(dist))]
+        return mids[order]
+
+    # ── NEW: B-spline 보간 ────────────────────────────────────
+    @staticmethod
+    def centerline_from_midpts(mids: np.ndarray, n_fit: int = 300):
+        """
+        mids (N×2) → 부드러운 중심선 (X, Y) [길이 n_fit]
+        스플라인 실패 시 선형 보간으로 폴백
+        """
+        t = np.arange(len(mids))
+        try:
+            sx = make_interp_spline(t, mids[:, 0], k=3)
+            sy = make_interp_spline(t, mids[:, 1], k=3)
+            tt = np.linspace(0, len(mids) - 1, n_fit)
+            return sx(tt), sy(tt)
+        except Exception:
+            tt = np.linspace(0, len(mids) - 1, n_fit)
+            return np.interp(tt, t, mids[:, 0]), np.interp(tt, t, mids[:, 1])
+
+    # ==========================================================
     # 경로 계획
     def plan_path(self):
         if len(self.left_ref) < 3 or len(self.right_ref) < 3:
@@ -124,12 +182,13 @@ class ReferencePathPlanner(Node):
         right_s = sorted([self.transform_pt(R_sr, t_sr, p) for p in self.right_ref],
                          key=lambda p: p[0])
 
-        Lx, Ly = self.safe_spline(left_s)
-        Rx, Ry = self.safe_spline(right_s)
-        if Lx.size == 0 or Rx.size == 0:
+        # ── NEW: Delaunay 중점 → B-spline → 등간격 샘플 ────────
+        mids = self.delaunay_midpoints(left_s, right_s)
+        if mids.size == 0:
             return
-        Mx, My = 0.5*(Lx + Rx), 0.5*(Ly + Ry)
-        wps = self.arc_sample(Mx, My)
+
+        Cx, Cy = self.centerline_from_midpts(mids)
+        wps    = self.arc_sample(Cx, Cy)
 
         # 최신 speed_profile 적용
         if len(self.speed_profile) == len(wps):
