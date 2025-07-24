@@ -18,7 +18,7 @@ local 경로 생성을 위해 색상 정보 및 ekf tracking 안되어 있는 �
 ros2 run cones_no_color visualize_cones.py
 -> 회색으로 /sorted_cones_time의 콘 marker로 pub함
 
-ros2 run reference_path_classifier classify_cones_by_side.py
+ros2 launch reference_path_classifier classify_cones_by_side.launch.py
 -> gps reference 경로를 기반으로 Frenet Frame으로 좌우 구분
 ros2 run cone_labeling cone_classifier
 -> 유빈이의 DBSCAN 방식으로 좌우 구분

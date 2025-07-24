@@ -28,6 +28,9 @@
   <exec_depend>visualization_msgs</exec_depend>
   <exec_depend>geometry_msgs</exec_depend>
   <exec_depend>custom_interface</exec_depend>
+  <exec_depend>launch</exec_depend>
+  <exec_depend>launch_ros</exec_depend>
+
 
   <!-- 테스트 옵션 -->
   <test_depend>ament_lint_auto</test_depend>

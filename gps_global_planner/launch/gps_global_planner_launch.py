@@ -22,7 +22,7 @@ def generate_launch_description():
     # ───────────────── CSV 기본 경로 구성 ───────────────────────
     csv_default = os.path.join(
         get_package_share_directory('gps_global_planner'),
-        'data', '4planning_250722_nocheon_rtk_curved.csv'
+        'data', 'ilgam_250721.csv'
     )
 
     csv_arg      = DeclareLaunchArgument('csv_file', default_value=csv_default)
