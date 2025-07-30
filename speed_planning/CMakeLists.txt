@@ -18,7 +18,13 @@ target_include_directories(speed_planner PUBLIC ${EIGEN3_INCLUDE_DIRS})
 ament_target_dependencies(speed_planner
   rclcpp std_msgs geometry_msgs visualization_msgs nav_msgs Eigen3)
 
-install(TARGETS speed_planner
+add_executable(global_speed_planner src/global_speed_planner.cpp)
+ament_target_dependencies(global_speed_planner 
+  rclcpp std_msgs geometry_msgs visualization_msgs ament_index_cpp)
+
+install(TARGETS 
+  speed_planner
+  global_speed_planner
   DESTINATION lib/${PROJECT_NAME})
 
 ament_package()
