@@ -136,7 +136,7 @@ ros2 run reference_path_classifier classify_cones_by_side.py
     </td>
     <td align="center">
       <img src="" width="45%"/><br>
-      <b>6. Obstacle Radius and Visualize Safe Zone</b>
+      <b>8. To be Continued</b>
     </td>
   </tr>
 </table>
