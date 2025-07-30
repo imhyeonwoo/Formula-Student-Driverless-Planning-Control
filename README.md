@@ -131,7 +131,7 @@ ros2 run reference_path_classifier classify_cones_by_side.py
   </tr>
   <tr>
     <td align="center">
-      <img src="docs/images/7local_speed_planning.gif" width="45%"/><br>
+      <img src="docs/images/7local_speed_planning.gif" width="60%"/><br>
       <b>7. Local Speed Planning</b>
     </td>
     <td align="center">
