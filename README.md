@@ -129,6 +129,16 @@ ros2 run reference_path_classifier classify_cones_by_side.py
       <b>6. Obstacle Radius and Visualize Safe Zone</b>
     </td>
   </tr>
+  <tr>
+    <td align="center">
+      <img src="docs/images/7local_speed_planning.gif" width="45%"/><br>
+      <b>7. Local Speed Planning</b>
+    </td>
+    <td align="center">
+      <img src="" width="45%"/><br>
+      <b>6. Obstacle Radius and Visualize Safe Zone</b>
+    </td>
+  </tr>
 </table>
 
 
