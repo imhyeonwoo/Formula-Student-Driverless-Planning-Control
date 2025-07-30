@@ -25,6 +25,8 @@ ros2 run cone_labeling cone_classifier
 
 ros2 run cones_no_color reference_path_planning.py
 
+ros2 run speed_planning speed_planner
+
 *필수적이지는 않은 노드
 ros2 run cones_no_color cone_safe_zone.py
 -> 추후 record line 구하게 될 때 사용하면 될 듯
