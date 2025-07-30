@@ -32,7 +32,7 @@ class GlobalConePublisher(Node):
 
         # ────── 매개변수 선언 ──────
         pkg_share = get_package_share_directory("gps_global_planner")
-        default_csv = os.path.join(pkg_share, "data", "ilgam_250721_cones.csv")
+        default_csv = os.path.join(pkg_share, "data", "administrator_250721_cones.csv")
         self.declare_parameter("csv_file", default_csv)
         # 127.0505869,37.5573749  ← 동일 기준점
         self.declare_parameter("ref_lat", 37.540190)

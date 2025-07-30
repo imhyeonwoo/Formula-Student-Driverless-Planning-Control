@@ -27,8 +27,8 @@ def local_to_latlon(x, y, ref_lat, ref_lon):
 def main():
     script_dir   = os.path.abspath(os.path.dirname(__file__))
     data_dir     = os.path.join(script_dir, "..", "data")
-    default_in   = os.path.join(data_dir, "ilgam_250721.csv")
-    default_out  = os.path.join(data_dir, "ilgam_250721_cones.csv")
+    default_in   = os.path.join(data_dir, "administrator_250721.csv")
+    default_out  = os.path.join(data_dir, "administrator_250721_cones.csv")
 
     parser = argparse.ArgumentParser()
     parser.add_argument("--input_csv",  default=default_in)

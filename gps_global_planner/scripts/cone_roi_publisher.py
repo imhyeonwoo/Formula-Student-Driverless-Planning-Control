@@ -53,7 +53,7 @@ class ConeROIPublisher(Node):
 
         # ────── 파라미터 ──────
         pkg_share = get_package_share_directory("gps_global_planner")
-        def_csv = os.path.join(pkg_share, "data", "ilgam_250721_cones.csv")
+        def_csv = os.path.join(pkg_share, "data", "administrator_250721_cones.csv")
 
         # konkuk_250721 : 37.542109, 127.078148
         # administartor_250721 : 37.543116, 127.076076
