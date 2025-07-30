@@ -282,14 +282,16 @@ class ReferencePathPlanner(Node):
             arr.markers.append(m)
 
             # Speed bar Cube
+            scale_factor = 0.5  # 줄이려는 배율
+
             b = Marker(header=header, ns="wp_speed", id=i,
                        type=Marker.CUBE, action=Marker.ADD)
             b.pose.position.x, b.pose.position.y = wp.x, wp.y
-            b.pose.position.z = max(wp.speed, 0.01) * 0.5
+            b.pose.position.z = max(wp.speed, 0.01) * scale_factor * 0.5
             b.pose.orientation.w = 1.0
             b.scale.x = b.scale.y = 0.2
-            b.scale.z = max(wp.speed, 0.01)
-            b.color.r, b.color.g, b.color.b, b.color.a = 0.0, 1.0, 0.0, 0.8
+            b.scale.z = max(wp.speed, 0.01) * scale_factor
+            b.color.r, b.color.g, b.color.b, b.color.a = 1.0, 0.0, 1.0, 0.8
             b.lifetime = self.marker_life
             bars.markers.append(b)
 
