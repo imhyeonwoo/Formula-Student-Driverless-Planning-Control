@@ -8,6 +8,7 @@ reference_path_planning.py
 • speed_planner 노드가 보내는 /desired_speed_profile 을 받아
   Waypoint.speed 를 갱신해 속도 막대(height=z) 시각화
 (2025-07-22  - Delaunay-midpoint 기반 버전)
+(2025-07-??  - speed_profile 길이 불일치 대응 & Marker 깜빡임 수정)
 """
 
 import math
@@ -69,12 +70,13 @@ class ReferencePathPlanner(Node):
         self.latest_wps: List[Waypoint] = []          # 최근 Waypoints
 
         # ── 파라미터 -------------------------------------------
-        self.arc_step      = 0.5
-        self.default_speed = 0.0
-        self.scale_wp      = 0.15
-        self.marker_life   = MsgDuration()   # 0 = forever
-        self.prev_wp_n     = 0
-        self._tf_warned    = False
+        self.arc_step        = 0.5
+        self.default_speed   = 0.0
+        self.scale_wp        = 0.15
+        self.min_bar_height  = 0.01                   # ### 변경: 최소 막대 높이
+        self.marker_life     = MsgDuration()          # 0 = forever
+        self.prev_wp_n       = 0
+        self._tf_warned      = False
 
     # ==========================================================
     # Marker 콜백
@@ -90,14 +92,30 @@ class ReferencePathPlanner(Node):
     # ==========================================================
     # speed_planner → 속도 배열
     def cb_speed_profile(self, msg: Float32MultiArray):
+        """길이 불일치가 있어도 가능한 범위까지만 속도를 반영"""
         self.speed_profile = list(msg.data)
 
-        # Waypoint 개수와 맞으면 즉시 재시각화
-        if len(self.latest_wps) == len(self.speed_profile):
-            for i, wp in enumerate(self.latest_wps):
-                wp.speed = self.speed_profile[i]
-            now = self.get_clock().now().to_msg()
-            self.publish_waypoints(self.latest_wps, now)
+        # Waypoint가 아직 없으면 나중에 plan_path가 호출될 때 반영됨
+        if not self.latest_wps:
+            return
+
+        n_wps = len(self.latest_wps)
+        n_sp  = len(self.speed_profile)
+        if n_sp == 0:
+            return
+
+        # 공통 길이까지만 복사
+        n_common = min(n_wps, n_sp)
+        for i in range(n_common):
+            self.latest_wps[i].speed = self.speed_profile[i]
+
+        # 남은 Waypoint는 기본 속도 유지
+        for i in range(n_common, n_wps):
+            self.latest_wps[i].speed = self.default_speed
+
+        # 바로 재시각화
+        now = self.get_clock().now().to_msg()
+        self.publish_waypoints(self.latest_wps, now)
 
     # ==========================================================
     # ── NEW: Delaunay 내부선 중점 추출 ─────────────────────────
@@ -190,10 +208,11 @@ class ReferencePathPlanner(Node):
         Cx, Cy = self.centerline_from_midpts(mids)
         wps    = self.arc_sample(Cx, Cy)
 
-        # 최신 speed_profile 적용
-        if len(self.speed_profile) == len(wps):
-            for i, wp in enumerate(wps):
-                wp.speed = self.speed_profile[i]
+        # 최신 speed_profile 적용 (길이 불일치 허용) ### 변경
+        if self.speed_profile:
+            n_common = min(len(wps), len(self.speed_profile))
+            for i in range(n_common):
+                wps[i].speed = self.speed_profile[i]
 
         # 보관 → 다른 콜백에서 재사용
         self.latest_wps = wps
@@ -216,23 +235,6 @@ class ReferencePathPlanner(Node):
     def transform_pt(R, t, pt_ref):
         xs, ys, _ = R @ np.array([pt_ref[0], pt_ref[1], 0.0]) + t
         return float(xs), float(ys)
-
-    @staticmethod
-    def safe_spline(pts, n=120):
-        if len(pts) < 3:
-            arr = np.array(pts, float)
-            return arr[:, 0], arr[:, 1] if len(arr) else (np.array([]), np.array([]))
-
-        arr = np.array(pts, float)
-        t   = np.arange(len(arr))
-        try:
-            sx = make_interp_spline(t, arr[:, 0], k=3)
-            sy = make_interp_spline(t, arr[:, 1], k=3)
-            t2 = np.linspace(0, len(arr) - 1, n)
-            return sx(t2), sy(t2)
-        except Exception:
-            t2 = np.linspace(0, len(arr) - 1, n)
-            return np.interp(t2, t, arr[:, 0]), np.interp(t2, t, arr[:, 1])
 
     def arc_sample(self, X, Y):
         if len(X) == 0:
@@ -270,8 +272,9 @@ class ReferencePathPlanner(Node):
         arr  = MarkerArray()
         bars = MarkerArray()
 
+        # Sphere + Bar Marker 생성
         for i, wp in enumerate(wps):
-            # Sphere
+            # Waypoint sphere ---------------------------
             m = Marker(header=header, ns="final_wp", id=i,
                        type=Marker.SPHERE, action=Marker.ADD)
             m.pose.position.x, m.pose.position.y = wp.x, wp.y
@@ -281,24 +284,23 @@ class ReferencePathPlanner(Node):
             m.lifetime = self.marker_life
             arr.markers.append(m)
 
-            # Speed bar Cube
-            scale_factor = 0.5  # 줄이려는 배율
-
+            # Speed bar cube ---------------------------
+            bar_h = max(wp.speed, self.min_bar_height)   # ### 변경
             b = Marker(header=header, ns="wp_speed", id=i,
                        type=Marker.CUBE, action=Marker.ADD)
             b.pose.position.x, b.pose.position.y = wp.x, wp.y
-            b.pose.position.z = max(wp.speed, 0.01) * scale_factor * 0.5
+            b.pose.position.z = bar_h * 0.5               # 바닥붙이기
             b.pose.orientation.w = 1.0
             b.scale.x = b.scale.y = 0.2
-            b.scale.z = max(wp.speed, 0.01) * scale_factor
+            b.scale.z = bar_h
             b.color.r, b.color.g, b.color.b, b.color.a = 1.0, 0.0, 1.0, 0.8
             b.lifetime = self.marker_life
             bars.markers.append(b)
 
-        # DELETE 여분 id
+        # DELETE 여분 id --------------------------------
         for j in range(len(wps), self.prev_wp_n):
             arr.markers.append(Marker(header=header, ns="final_wp", id=j, action=Marker.DELETE))
-            bars.markers.append(Marker(header=header, ns="wp_speed", id=j, action=Marker.DELETE))
+            bars.markers.append(Marker(header=header, ns="wp_speed",  id=j, action=Marker.DELETE))
 
         self.prev_wp_n = len(wps)
         self.pub_wps.publish(arr)
