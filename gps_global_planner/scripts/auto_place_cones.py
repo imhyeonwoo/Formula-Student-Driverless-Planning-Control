@@ -56,7 +56,7 @@ def main():
     for i in range(len(xy) - 1):
         p0, p1 = xy[i], xy[i+1]
         vec, dist = p1 - p0, seg_len[i]
-        while next_d <= cum_len[i+1]:
+        while next_d <= cum_len[i]:
             t = (next_d - cum_len[i]) / dist if dist > 0 else 0
             pos = p0 + t * vec
             dir_v = vec / dist if dist > 0 else np.array([1, 0])
@@ -64,6 +64,9 @@ def main():
             cones_l.append(pos + half_w * perp)
             cones_r.append(pos - half_w * perp)
             next_d += spacing
+
+    cones_l.pop(0)
+    cones_r.pop(0)
 
     cones_xy = np.vstack([cones_l, cones_r])
     cone_latlon = [local_to_latlon(x, y, ref_lat, ref_lon) for x, y in cones_xy]
