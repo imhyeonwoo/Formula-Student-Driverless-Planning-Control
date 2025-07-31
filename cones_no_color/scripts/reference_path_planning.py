@@ -70,7 +70,7 @@ class ReferencePathPlanner(Node):
         self.latest_wps: List[Waypoint] = []          # 최근 Waypoints
 
         # ── 파라미터 -------------------------------------------
-        self.arc_step        = 0.5
+        self.arc_step        = 1.0
         self.default_speed   = 0.0
         self.scale_wp        = 0.15
         self.min_bar_height  = 0.01                   # ### 변경: 최소 막대 높이
