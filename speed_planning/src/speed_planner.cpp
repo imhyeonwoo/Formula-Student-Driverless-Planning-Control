@@ -1,167 +1,159 @@
-// speed_planner.cpp - ROS 2 Node for curvature-based local speed planning
+#include <cmath>
+#include <functional>
 #include <rclcpp/rclcpp.hpp>
+#include <std_msgs/msg/float32.hpp>
+#include <std_msgs/msg/float32_multi_array.hpp>
 #include <nav_msgs/msg/path.hpp>
 #include <geometry_msgs/msg/pose_stamped.hpp>
-#include <std_msgs/msg/float32_multi_array.hpp>
-#include <vector>
-#include <algorithm>
-#include <cmath>
-#include <limits>
 
-class SpeedPlanner : public rclcpp::Node {
+/**
+ * @brief Speed Planner Node
+ *
+ * This node subscribes to a planned path and the current vehicle speed, 
+ * then computes a desired speed profile along that path. The speed profile 
+ * is published on the /desired_speed_profile topic, where each element 
+ * corresponds to a target speed at the respective point along the path.
+ * 
+ * The initial speed of the profile is set to the current vehicle speed (if available),
+ * which improves planning accuracy when the vehicle is already moving. If the current
+ * speed is not yet available, it defaults to 0.0 and a warning is logged.
+ * This ensures that the forward acceleration planning accounts for the actual 
+ * vehicle speed, allowing safe acceleration planning even when the vehicle is not starting from a stop.
+ */
+class SpeedPlanner : public rclcpp::Node
+{
 public:
-    SpeedPlanner() : rclcpp::Node("speed_planner") {
-        // Declare ROS 2 parameters with default values
-        this->declare_parameter<double>("a_long_max", 3.0);   // max forward acceleration (m/s^2)
-        this->declare_parameter<double>("a_brake_max", 3.5);  // max braking deceleration (m/s^2)
-        this->declare_parameter<double>("a_lat_max", 3.0);    // max lateral acceleration for turns (m/s^2)
-        this->declare_parameter<double>("diff_eps",  0.05);   // min change to republish (m/s)
-
-        // Get parameter values (or defaults if not set)
-        this->get_parameter("a_long_max",  a_long_max_);
-        this->get_parameter("a_brake_max", a_brake_max_);
-        this->get_parameter("a_lat_max",   a_lat_max_);
-        this->get_parameter("diff_eps",    diff_eps_);
-
-        // Set up publisher for the desired speed profile (list of speeds)
-        speed_pub_ = this->create_publisher<std_msgs::msg::Float32MultiArray>(
-            "/desired_speed_profile", 10);
-
-        // Set up subscriber for the local planned path (sequence of PoseStamped)
-        path_sub_ = this->create_subscription<nav_msgs::msg::Path>(
-            "/local_planned_path", 10,
-            std::bind(&SpeedPlanner::pathCallback, this, std::placeholders::_1)
-        );
-    }
+    SpeedPlanner();
 
 private:
-    void pathCallback(const nav_msgs::msg::Path::SharedPtr msg) {
-        const auto & poses = msg->poses;
-        const size_t n = poses.size();
-        if (n == 0) {                         // No path
-            return;
-        }
+    void pathCallback(const nav_msgs::msg::Path::SharedPtr path);
+    void speedCallback(const std_msgs::msg::Float32::SharedPtr msg);
 
-        if (n == 1) {                         // Single‑point path
-            std_msgs::msg::Float32MultiArray speed_msg;
-            speed_msg.data = {0.0f};
-            speed_pub_->publish(speed_msg);
-            prev_speed_  = {0.0};
-            return;
-        }
-
-        /* --------- 준비 --------- */
-        std::vector<double> curvature_speed(n);
-        std::vector<double> speed(n);
-        std::vector<double> dist(n);
-
-        /* 거리 계산 */
-        for (size_t i = 0; i < n - 1; ++i) {
-            double dx = poses[i+1].pose.position.x - poses[i].pose.position.x;
-            double dy = poses[i+1].pose.position.y - poses[i].pose.position.y;
-            double dz = poses[i+1].pose.position.z - poses[i].pose.position.z;
-            dist[i] = std::sqrt(dx*dx + dy*dy + dz*dz);
-            if (dist[i] < 1e-6) dist[i] = 1e-6;            // avoid zero
-        }
-        dist[n-1] = 0.0;
-
-        /* 곡률 기반 속도 한계 */
-        curvature_speed.front()  = std::numeric_limits<double>::infinity();
-        curvature_speed.back()   = std::numeric_limits<double>::infinity();
-        for (size_t i = 1; i < n - 1; ++i) {
-            double x0 = poses[i-1].pose.position.x, y0 = poses[i-1].pose.position.y;
-            double x1 = poses[i  ].pose.position.x, y1 = poses[i  ].pose.position.y;
-            double x2 = poses[i+1].pose.position.x, y2 = poses[i+1].pose.position.y;
-
-            double dx1 = x1 - x0, dy1 = y1 - y0;
-            double dx2 = x2 - x0, dy2 = y2 - y0;
-            double cross = std::abs(dx1 * (y2 - y0) - dy1 * (x2 - x0));
-            double d01 = std::hypot(dx1, dy1);
-            double d02 = std::hypot(dx2, dy2);
-            double d12 = std::hypot(x2 - x1, y2 - y1);
-
-            if (d01 < 1e-6 || d02 < 1e-6 || d12 < 1e-6) {
-                curvature_speed[i] = std::numeric_limits<double>::infinity();
-            } else {
-                double curvature = (2.0 * cross) / (d01 * d02 * d12);
-                curvature_speed[i] =
-                    (curvature < 1e-9) ?
-                    std::numeric_limits<double>::infinity() :
-                    std::sqrt(a_lat_max_ / curvature);
-            }
-        }
-
-        /* 초기 속도 프로파일 = 곡률 한계 */
-        for (size_t i = 0; i < n; ++i)
-            speed[i] = std::isfinite(curvature_speed[i]) ? curvature_speed[i] : 1e6;
-
-        /* 가속 한계 (forward pass) */
-        speed[0] = 0.0;                       // assume start at 0
-        for (size_t i = 1; i < n; ++i) {
-            double v_limit = std::sqrt(speed[i-1]*speed[i-1]
-                                       + 2.0 * a_long_max_ * dist[i-1]);
-            if (speed[i] > v_limit) speed[i] = v_limit;
-        }
-
-        /* 감속 한계 (backward pass) */
-        for (int i = static_cast<int>(n) - 2; i >= 0; --i) {
-            double v_limit = std::sqrt(speed[i+1]*speed[i+1]
-                                       + 2.0 * a_brake_max_ * dist[i]);
-            if (speed[i] > v_limit) speed[i] = v_limit;
-        }
-
-        /* 3‑point moving average */
-        std::vector<double> smooth_speed(n);
-        if (n >= 3) {
-            smooth_speed[0]   = speed[0];
-            smooth_speed[n-1] = speed[n-1];
-            for (size_t i = 1; i < n-1; ++i) {
-                smooth_speed[i] = 0.25*speed[i-1] + 0.5*speed[i] + 0.25*speed[i+1];
-                if (smooth_speed[i] > speed[i]) smooth_speed[i] = speed[i];
-            }
-        } else {
-            smooth_speed = speed;
-        }
-
-        /* ---------- 변화량 검사 ---------- */
-        bool changed = (prev_speed_.size() != n);
-        if (!changed) {
-            for (size_t i = 0; i < n; ++i) {
-                if (std::fabs(smooth_speed[i] - prev_speed_[i]) > diff_eps_) {
-                    changed = true; break;
-                }
-            }
-        }
-        if (!changed) return;                 // skip publish
-
-        /* 퍼블리시 */
-        std_msgs::msg::Float32MultiArray speed_msg;
-        speed_msg.data.reserve(n);
-        for (double v : smooth_speed)
-            speed_msg.data.push_back(static_cast<float>(v));
-        speed_pub_->publish(speed_msg);
-
-        /* 캐시 갱신 */
-        prev_speed_.swap(smooth_speed);
-    }
-
-    /* ---------- ROS 2 I/O ---------- */
+    rclcpp::Publisher<std_msgs::msg::Float32MultiArray>::SharedPtr speed_profile_pub_;
     rclcpp::Subscription<nav_msgs::msg::Path>::SharedPtr path_sub_;
-    rclcpp::Publisher<std_msgs::msg::Float32MultiArray>::SharedPtr speed_pub_;
+    rclcpp::Subscription<std_msgs::msg::Float32>::SharedPtr current_speed_sub_;
 
-    /* ---------- 파라미터 ---------- */
-    double a_long_max_;
-    double a_brake_max_;
-    double a_lat_max_;
-    double diff_eps_;
+    float current_speed_;
+    bool current_speed_received_;
 
-    /* ---------- 상태 ---------- */
-    std::vector<double> prev_speed_;
+    double max_speed_;
+    double max_accel_;
+    double max_decel_;
 };
 
-int main(int argc, char * argv[]) {
+SpeedPlanner::SpeedPlanner()
+: Node("speed_planner"), current_speed_(0.0f), current_speed_received_(false)
+{
+    // Declare and get parameters for speed limits
+    this->declare_parameter<double>("max_speed", 20.0);  // Maximum speed in m/s(5 m/s = 18 km/h)
+    this->declare_parameter<double>("max_accel", 2.0);  // Maximum acceleration in m/s^2(2 m/s^2 = 0.2 g)
+    this->declare_parameter<double>("max_decel", 2.0);  // Maximum deceleration in m/s^2(2 m/s^2 = 0.2 g)
+    max_speed_ = this->get_parameter("max_speed").as_double();
+    max_accel_ = this->get_parameter("max_accel").as_double();
+    max_decel_ = this->get_parameter("max_decel").as_double();
+
+    // Publisher: desired speed profile
+    speed_profile_pub_ = this->create_publisher<std_msgs::msg::Float32MultiArray>(
+        "/desired_speed_profile", 10);
+
+    // Subscription: planned path (Path message)
+    path_sub_ = this->create_subscription<nav_msgs::msg::Path>(
+        "/local_planned_path", 10,
+        std::bind(&SpeedPlanner::pathCallback, this, std::placeholders::_1));
+
+    // Subscription: current speed (std_msgs/Float32), using SensorDataQoS for sensor data
+    current_speed_sub_ = this->create_subscription<std_msgs::msg::Float32>(
+        "/current_speed", rclcpp::SensorDataQoS(),
+        std::bind(&SpeedPlanner::speedCallback, this, std::placeholders::_1));
+}
+
+void SpeedPlanner::speedCallback(const std_msgs::msg::Float32::SharedPtr msg)
+{
+    // Very lightweight: store the latest speed value
+    current_speed_ = msg->data;
+    current_speed_received_ = true;
+    // (Single-threaded execution assumed, so no mutex needed for this variable)
+}
+
+void SpeedPlanner::pathCallback(const nav_msgs::msg::Path::SharedPtr path)
+{
+    // If no path points, do nothing
+    if (path->poses.empty()) {
+        return;
+    }
+
+    size_t N = path->poses.size();
+    std::vector<float> speed(N);
+
+    // Set initial speed to current speed if available, otherwise 0.0
+    float initial_speed = 0.0f;
+    if (current_speed_received_) {
+        initial_speed = current_speed_;
+    } else {
+        RCLCPP_WARN(this->get_logger(),
+            "Current speed not received yet. Using 0.0 as initial speed.");
+        initial_speed = 0.0f;
+    }
+    // Cap initial speed to the maximum allowed speed
+    if (initial_speed > static_cast<float>(max_speed_)) {
+        initial_speed = static_cast<float>(max_speed_);
+    }
+    speed[0] = initial_speed;
+
+    // Initialize remaining points of the speed profile to the max allowed speed
+    for (size_t i = 1; i < N; ++i) {
+        speed[i] = static_cast<float>(max_speed_);
+    }
+    // Set target speed at the final point (e.g., stop at end of path)
+    speed[N - 1] = 0.0f;
+
+    // Backward pass: enforce deceleration limits
+    // Ensure the vehicle can decelerate from each point to the final speed within the distance to the next point
+    for (int j = static_cast<int>(N) - 2; j >= 0; --j) {
+        // Calculate distance between point j and j+1
+        double dx = path->poses[j+1].pose.position.x - path->poses[j].pose.position.x;
+        double dy = path->poses[j+1].pose.position.y - path->poses[j].pose.position.y;
+        double dist = std::sqrt(dx * dx + dy * dy);
+        // Compute allowed speed at point j to decelerate to speed[j+1] over distance
+        double v_next = speed[j+1];
+        double v_allow = std::sqrt(v_next * v_next + 2 * max_decel_ * dist);
+        if (speed[j] > v_allow) {
+            speed[j] = static_cast<float>(v_allow);
+        }
+    }
+
+    // Forward pass: enforce acceleration limits
+    // Ensure the vehicle does not accelerate faster than max_accel_ between consecutive points
+    for (size_t j = 0; j < N - 1; ++j) {
+        // Calculate distance between point j and j+1
+        double dx = path->poses[j+1].pose.position.x - path->poses[j].pose.position.x;
+        double dy = path->poses[j+1].pose.position.y - path->poses[j].pose.position.y;
+        double dist = std::sqrt(dx * dx + dy * dy);
+        // Compute allowed speed at point j+1 given acceleration from speed[j] over distance
+        double v_curr = speed[j];
+        double v_allow = std::sqrt(v_curr * v_curr + 2 * max_accel_ * dist);
+        if (speed[j+1] > v_allow) {
+            speed[j+1] = static_cast<float>(v_allow);
+        }
+    }
+
+    // Publish the desired speed profile as a Float32MultiArray
+    std_msgs::msg::Float32MultiArray speed_profile_msg;
+    speed_profile_msg.data.resize(N);
+    for (size_t i = 0; i < N; ++i) {
+        speed_profile_msg.data[i] = speed[i];
+    }
+    speed_profile_msg.layout.data_offset = 0;  // (Optional: offset of the data array)
+    // Note: layout.dim is left empty since this is a 1D array of length N
+
+    speed_profile_pub_->publish(speed_profile_msg);
+}
+
+int main(int argc, char *argv[])
+{
     rclcpp::init(argc, argv);
-    rclcpp::spin(std::make_shared<SpeedPlanner>());
+    auto node = std::make_shared<SpeedPlanner>();
+    rclcpp::spin(node);
     rclcpp::shutdown();
     return 0;
 }
