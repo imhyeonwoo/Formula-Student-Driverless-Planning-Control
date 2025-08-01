@@ -62,7 +62,7 @@ class ConeROIPublisher(Node):
         self.declare_parameter("csv_file", def_csv)
         self.declare_parameter("ref_lat", 37.540190)
         self.declare_parameter("ref_lon", 127.076488)
-        self.declare_parameter("roi_radius", 100.0)   # [m]
+        self.declare_parameter("roi_radius", 50.0)   # [m]
         self.declare_parameter("timer_hz", 10.0)     # [Hz]
 
         self.ref_lat = self.get_parameter("ref_lat").value
