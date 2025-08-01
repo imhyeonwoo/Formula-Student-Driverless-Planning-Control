@@ -1,0 +1,37 @@
+<?xml version="1.0"?>
+<package format="3">
+  <!-- #########################################################
+       trajectory_processing
+       궤적 전처리(등시간격) + MPC 등을 담는 포괄 패키지
+       ######################################################### -->
+  <name>trajectory_processing</name>
+  <version>0.0.1</version>
+  <description>Time-parameterisation &amp; MPC tools for local trajectory processing.</description>
+
+  <!-- 유지보수자 정보 -->
+  <maintainer email="ihw@todo.todo">ihw</maintainer>
+  <license>Apache-2.0</license>  <!-- ### 필요 시 변경 -->
+
+  <!-- ########## 빌드 툴 ########## -->
+  <buildtool_depend>ament_cmake</buildtool_depend>
+
+  <!-- ########## 공통 의존성 ########## -->
+  <depend>rclcpp</depend>
+  <depend>nav_msgs</depend>
+  <depend>geometry_msgs</depend>
+  <depend>std_msgs</depend>
+  <depend>Eigen3</depend>         <!-- ### Eigen 사용 안 하면 삭제 -->
+
+  <!-- ########## 파이썬 런타임 ########## -->
+  <exec_depend>python3</exec_depend>
+
+  <!-- ########## 테스트 의존성 (선택) ########## -->
+  <!--
+  <test_depend>ament_lint_auto</test_depend>
+  <test_depend>ament_lint_common</test_depend>
+  -->
+
+  <export>
+    <build_type>ament_cmake</build_type>
+  </export>
+</package>
