@@ -8,7 +8,7 @@ reference_path_planning.py
 • speed_planner 노드가 보내는 /desired_speed_profile 을 받아
   Waypoint.speed 를 갱신해 속도 막대(height=z) 시각화
 (2025-07-22  - Delaunay-midpoint 기반 버전)
-(2025-07-??  - speed_profile 길이 불일치 대응 & Marker 깜빡임 수정)
+(2025-07-31~08/01  - speed_profile 길이 불일치 대응 & Marker 깜빡임 수정)
 """
 
 import math
