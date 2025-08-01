@@ -70,13 +70,15 @@ class ReferencePathPlanner(Node):
         self.latest_wps: List[Waypoint] = []          # 최근 Waypoints
 
         # ── 파라미터 -------------------------------------------
-        self.arc_step        = 1.0
+        self.arc_step        = 0.5
         self.default_speed   = 0.0
         self.scale_wp        = 0.15
         self.min_bar_height  = 0.01                   # ### 변경: 최소 막대 높이
         self.marker_life     = MsgDuration()          # 0 = forever
         self.prev_wp_n       = 0
         self._tf_warned      = False
+
+        self.last_valid_stamp = rclpy.time.Time()
 
     # ==========================================================
     # Marker 콜백
@@ -114,8 +116,13 @@ class ReferencePathPlanner(Node):
             self.latest_wps[i].speed = self.default_speed
 
         # 바로 재시각화
-        now = self.get_clock().now().to_msg()
-        self.publish_waypoints(self.latest_wps, now)
+        # now = self.get_clock().now().to_msg()
+        self.publish_waypoints(self.latest_wps, self.last_valid_stamp.to_msg())
+        # 경로를 처음 만든 뒤에는 동일한 TF-시각 또는 0-Time 사용
+        self.publish_waypoints(
+            self.latest_wps,
+            self.last_valid_stamp.to_msg()    # ← 0-Time이면 최신 TF
+        )
 
     # ==========================================================
     # ── NEW: Delaunay 내부선 중점 추출 ─────────────────────────
@@ -192,6 +199,7 @@ class ReferencePathPlanner(Node):
             return
         self._tf_warned = False
         stamp_time = tf_s_r.header.stamp
+        self.last_valid_stamp = rclpy.time.Time.from_msg(stamp_time)
 
         R_sr, t_sr = self.tf_to_mat(tf_s_r)
 
