@@ -131,12 +131,12 @@ ros2 run reference_path_classifier classify_cones_by_side.py
   </tr>
   <tr>
     <td align="center">
-      <img src="docs/images/7local_speed_planning.gif" width="60%"/><br>
+      <img src="docs/images/MPC/1Local%20Path.gif" width="60%"/><br>
       <b>7. Local Speed Planning</b>
     </td>
     <td align="center">
-      <img src="" width="45%"/><br>
-      <b>8. To be Continued</b>
+      <img src="docs/images/MPC/2MPC%20Path.gif" width="45%"/><br>
+      <b>8. Time Resampled Path for MPC</b>
     </td>
   </tr>
 </table>
