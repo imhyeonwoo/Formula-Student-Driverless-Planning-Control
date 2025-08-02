@@ -301,7 +301,7 @@ class ReferencePathPlanner(Node):
             b.pose.orientation.w = 1.0
             b.scale.x = b.scale.y = 0.2
             b.scale.z = bar_h
-            b.color.r, b.color.g, b.color.b, b.color.a = 1.0, 0.0, 1.0, 0.8
+            b.color.r, b.color.g, b.color.b, b.color.a = 1.0, 0.0, 1.0, 0.4
             b.lifetime = self.marker_life
             bars.markers.append(b)
 

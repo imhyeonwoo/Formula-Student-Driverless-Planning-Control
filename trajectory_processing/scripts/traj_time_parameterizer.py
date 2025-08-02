@@ -30,8 +30,8 @@ class TrajTimeParameterizer(Node):
 
         # ─── 파라미터 ───────────────────────────────────────
         self.dt           = self.declare_parameter("dt", 0.1).value
-        self.v_nom        = self.declare_parameter("v_nom", 3.0).value
-        self.preview_time = self.declare_parameter("preview_time", 5.0).value
+        self.v_nom        = self.declare_parameter("v_nom", 0.0).value
+        self.preview_time = self.declare_parameter("preview_time", 3.0).value
 
         # ─── 내부 상태 ──────────────────────────────────────
         self.speed_profile: list[float] = []   # 최신 속도 배열
