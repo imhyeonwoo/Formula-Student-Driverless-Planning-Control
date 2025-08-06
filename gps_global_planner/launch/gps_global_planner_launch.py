@@ -29,9 +29,9 @@ def generate_launch_description():
     # ───────────────── 오프셋/높이 고정 파라미터 선언 ─────────────────
     # base_link : 차량 후륜축 중심
     # GPS Antenna 위치(base_link -> gps_antenna)
-    ant_x_arg = DeclareLaunchArgument('antenna_offset_x', default_value='1.7')
+    ant_x_arg = DeclareLaunchArgument('antenna_offset_x', default_value='2.6')
     ant_y_arg = DeclareLaunchArgument('antenna_offset_y', default_value='0.0')
-    ant_z_arg = DeclareLaunchArgument('antenna_offset_z', default_value='3.0')
+    ant_z_arg = DeclareLaunchArgument('antenna_offset_z', default_value='1.0')
     antenna_offset_x = LaunchConfiguration('antenna_offset_x')
     antenna_offset_y = LaunchConfiguration('antenna_offset_y')
     antenna_offset_z = LaunchConfiguration('antenna_offset_z')
@@ -39,7 +39,7 @@ def generate_launch_description():
     # LiDAR 위치(base_link -> os_sensor)
     sen_x_arg = DeclareLaunchArgument('sensor_offset_x', default_value='0.0')
     sen_y_arg = DeclareLaunchArgument('sensor_offset_y', default_value='0.0')
-    sen_z_arg = DeclareLaunchArgument('sensor_offset_z', default_value='2.0')
+    sen_z_arg = DeclareLaunchArgument('sensor_offset_z', default_value='1.8')
     sensor_offset_x = LaunchConfiguration('sensor_offset_x')
     sensor_offset_y = LaunchConfiguration('sensor_offset_y')
     sensor_offset_z = LaunchConfiguration('sensor_offset_z')
