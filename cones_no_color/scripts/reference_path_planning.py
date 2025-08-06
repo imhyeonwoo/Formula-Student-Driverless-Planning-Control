@@ -59,7 +59,7 @@ class ReferencePathPlanner(Node):
                                  self.cb_speed_profile, 10)
 
         # ── TF --------------------------------------------------
-        self.sensor_frame = "os_sensor"
+        self.sensor_frame = "base_link"
         self.ref_frame    = "reference"
         self.tf_buf = tf2_ros.Buffer(cache_time=Duration(seconds=2))
         self.tf_lst = tf2_ros.TransformListener(self.tf_buf, self)
