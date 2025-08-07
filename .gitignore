@@ -1,11 +1,69 @@
-# 빌드 산출물
+# === ROS 2 build artifacts ===
 build/
 install/
 log/
-*.o
+
+# === Colcon workspace metadata ===
+.colcon/
+*.log
 *.pyc
+*.pyo
 __pycache__/
-# ROS2 colcon
-*colcon*
-# VSCode 설정
+
+# === Python virtual environments ===
+.venv/
+venv/
+env/
+ENV/
+*.env
+*.env.*
+
+# === Python distribution folders ===
+dist/
+*.egg-info/
+
+# === CMake & C++ build artifacts ===
+CMakeFiles/
+CMakeCache.txt
+cmake_install.cmake
+Makefile
+
+# === VSCode ===
 .vscode/
+.history/
+
+# === CLion / JetBrains IDEs ===
+.idea/
+
+# === System Files ===
+.DS_Store
+Thumbs.db
+
+# === ROS-specific files ===
+*.launch.py~
+*.launch~
+*.rviz~
+*.db3
+*.bag
+*.bag.active
+*.orig
+
+# === ROS 2 logs ===
+*.log
+*.trace
+.tracetools/
+tracetools_test/
+
+# === Test & coverage outputs ===
+test_results/
+coverage.xml
+*.lcov
+*.gcda
+*.gcno
+*.gcov
+
+# === Custom ===
+*.swp
+*.swo
+*.bak
+*.tmp
