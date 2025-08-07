@@ -18,6 +18,8 @@
  #include <vector>
 
  constexpr double N_MAX = 3.0;   // lateral 한계 [m]  ← 원하는 폭으로 조정
+ // N_MAX 값은 경로로부터 너무 멀리 떨어진 콘을 필터링하는 데 사용됨.
+ // N_MAX : 경로로부터 콘이 얼마나 멀리 떨어져 있는지에 대한 최대 허용 거리(경로폭/2)
  
  #ifdef _OPENMP
    #include <omp.h>
