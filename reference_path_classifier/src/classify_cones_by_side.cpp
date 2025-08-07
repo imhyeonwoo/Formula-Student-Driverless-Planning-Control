@@ -16,6 +16,8 @@
  #include <algorithm>
  #include <memory>
  #include <vector>
+
+ constexpr double N_MAX = 3.0;   // lateral 한계 [m]  ← 원하는 폭으로 조정
  
  #ifdef _OPENMP
    #include <omp.h>
@@ -126,44 +128,51 @@
  
    /* ---------- KD‑Tree Frenet 분류 ---------- */
    void classifyCones(const std::vector<Eigen::Vector2d>& cones,
-                      std::vector<Eigen::Vector2d>& left_out,
-                      std::vector<Eigen::Vector2d>& right_out) const
-   {
-     constexpr size_t K = 1;
-     std::vector<long int> idx(K);
-     std::vector<double>   d2 (K);
-     size_t segN = path_pts_.rows() - 1;
- 
-     for (const auto &c : cones)
-     {
-       kd_tree_->index->knnSearch(c.data(), K, idx.data(), d2.data());
-       size_t near_idx = static_cast<size_t>(idx[0]);
- 
-       /* 후보 세그먼트 */
-       size_t best_i  = near_idx;
-       double best_d2 = std::numeric_limits<double>::max();
-       Eigen::Vector2d best_proj;
- 
-       for (int off=-1; off<=0; ++off) {
-         long si = static_cast<long>(near_idx) + off;
-         if (si<0 || static_cast<size_t>(si)>=segN) continue;
-         size_t i = static_cast<size_t>(si);
-         Eigen::Vector2d p = path_pts_.row(i);
-         Eigen::Vector2d q = path_pts_.row(i+1);
-         Eigen::Vector2d v = q - p;
-         double v2 = v.squaredNorm(); if (v2==0.0) continue;
-         double u = std::clamp(((c-p).dot(v))/v2, 0.0, 1.0);
-         Eigen::Vector2d proj = p + u*v;
-         double dist2 = (c - proj).squaredNorm();
-         if (dist2 < best_d2) { best_d2 = dist2; best_i = i; best_proj = proj; }
-       }
- 
-       Eigen::Vector2d t_hat = path_pts_.row(best_i+1) - path_pts_.row(best_i);
-       Eigen::Vector2d d_vec = c - best_proj;
-       double z = t_hat.x()*d_vec.y() - t_hat.y()*d_vec.x();
-       (z>0 ? left_out : right_out).push_back(c);
-     }
-   }
+    std::vector<Eigen::Vector2d>& left_out,
+    std::vector<Eigen::Vector2d>& right_out) const
+    {
+    constexpr size_t K = 1;
+    std::vector<long int> idx(K);
+    std::vector<double>   d2 (K);
+    size_t segN = path_pts_.rows() - 1;
+
+    for (const auto &c : cones)
+    {
+    kd_tree_->index->knnSearch(c.data(), K, idx.data(), d2.data());
+    size_t near_idx = static_cast<size_t>(idx[0]);
+
+    /* 후보 세그먼트 */
+    size_t best_i  = near_idx;
+    double best_d2 = std::numeric_limits<double>::max();
+    Eigen::Vector2d best_proj;
+
+    for (int off=-1; off<=0; ++off) {
+    long si = static_cast<long>(near_idx) + off;
+    if (si<0 || static_cast<size_t>(si)>=segN) continue;
+    size_t i = static_cast<size_t>(si);
+    Eigen::Vector2d p = path_pts_.row(i);
+    Eigen::Vector2d q = path_pts_.row(i+1);
+    Eigen::Vector2d v = q - p;
+    double v2 = v.squaredNorm(); if (v2==0.0) continue;
+    double u = std::clamp(((c-p).dot(v))/v2, 0.0, 1.0);
+    Eigen::Vector2d proj = p + u*v;
+    double dist2 = (c - proj).squaredNorm();
+    if (dist2 < best_d2) { best_d2 = dist2; best_i = i; best_proj = proj; }
+    }
+
+    Eigen::Vector2d t_hat = path_pts_.row(best_i+1) - path_pts_.row(best_i);
+    Eigen::Vector2d d_vec = c - best_proj;
+    double z = t_hat.x()*d_vec.y() - t_hat.y()*d_vec.x();
+
+    /* ★★★★★ lateral 거리 n 계산 & 필터 ★★★★★ */
+    double n = (z >= 0 ? 1.0 : -1.0) * std::sqrt(best_d2);
+    if (std::abs(n) > N_MAX) continue;   // 필터: 경로로부터 너무 멀면 스킵
+    /* ★★★★★-----------------------------------------------------*/
+
+    (z > 0 ? left_out : right_out).push_back(c);
+    }
+    }
+
  
    /* ---------- 마커 작성 ---------- */
    void publishMarker(const rclcpp::Publisher<Marker>::SharedPtr &pub,
