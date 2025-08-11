@@ -87,7 +87,7 @@ class ReferencePathPlanner(Node):
 
         # ── 파라미터 -------------------------------------------
         self.arc_step = 0.5
-        self.default_speed = 0.0
+        self.default_speed = 2.0
         self.scale_wp = 0.15
         self.min_bar_height = 0.01
         self.marker_life = MsgDuration()  # 0 = forever

@@ -22,6 +22,10 @@ add_executable(global_speed_planner src/global_speed_planner.cpp)
 ament_target_dependencies(global_speed_planner 
   rclcpp std_msgs geometry_msgs visualization_msgs ament_index_cpp)
 
+add_executable(speed_planner_preview src/speed_planner_preview.cpp)
+ament_target_dependencies(speed_planner_preview
+  rclcpp std_msgs nav_msgs geometry_msgs visualization_msgs)
+
 add_executable(gps_speed_node src/gps_speed_node.cpp)
 ament_target_dependencies(gps_speed_node 
   rclcpp sensor_msgs std_msgs)
@@ -29,6 +33,7 @@ ament_target_dependencies(gps_speed_node
 install(TARGETS 
   speed_planner
   global_speed_planner
+  speed_planner_preview
   gps_speed_node 
   DESTINATION lib/${PROJECT_NAME})
 

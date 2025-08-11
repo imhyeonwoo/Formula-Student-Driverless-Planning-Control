@@ -1,12 +1,12 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-cone_roi_publisher.py  (updated 2025-07-07)
+cone_roi_publisher.py  (updated 2025-08-11)
 
 • CSV의 WGS84 콘 절대좌표 → reference 평면(x,y) 변환
 • TF(reference→gps_antenna→os_sensor)로 os_sensor 상대좌표 계산
 • 전방 180°(x ≥ 0) & 반경 roi_radius 이내 콘만 선택
-• /sorted_cones_time (ModifiedFloat32MultiArray) 로 (x,y,z=0) 3-tuple 퍼블리시
+• /sorted_cones_time_ukf (TrackedConeArray) 로 퍼블리시
 • /lidar_roi_marker  (visualization_msgs/Marker) 로 ROI 부채꼴 시각화
 """
 
@@ -23,8 +23,8 @@ from rclpy.node import Node
 from ament_index_python.packages import get_package_share_directory
 
 from visualization_msgs.msg import Marker
-from std_msgs.msg import MultiArrayDimension, MultiArrayLayout
-from custom_interface.msg import ModifiedFloat32MultiArray
+from geometry_msgs.msg import Point
+from custom_interface.msg import TrackedCone, TrackedConeArray
 
 import tf2_ros
 import tf_transformations
@@ -62,7 +62,7 @@ class ConeROIPublisher(Node):
         self.declare_parameter("csv_file", def_csv)
         self.declare_parameter("ref_lat", 37.540190)
         self.declare_parameter("ref_lon", 127.076488)
-        self.declare_parameter("roi_radius", 50.0)   # [m]
+        self.declare_parameter("roi_radius", 16.0)   # [m]
         self.declare_parameter("timer_hz", 10.0)     # [Hz]
 
         self.ref_lat = self.get_parameter("ref_lat").value
@@ -98,7 +98,7 @@ class ConeROIPublisher(Node):
 
         # ────── 퍼블리셔 ──────
         self.pub_cone = self.create_publisher(
-            ModifiedFloat32MultiArray, "/sorted_cones_time", 10
+            TrackedConeArray, "/sorted_cones_time_ukf", 10
         )
         self.pub_roi = self.create_publisher(Marker, "/lidar_roi_marker", 1)
 
@@ -127,9 +127,8 @@ class ConeROIPublisher(Node):
 
     @staticmethod
     def _pt(x: float, y: float):
-        from geometry_msgs.msg import Point
-
-        p = Point()
+        from geometry_msgs.msg import Point as Pt
+        p = Pt()
         p.x, p.y, p.z = x, y, 0.0
         return p
 
@@ -165,37 +164,24 @@ class ConeROIPublisher(Node):
         rel_pts.sort(key=lambda x: x[2])  # 거리순 정렬
         self.get_logger().debug(f"ROI cones: {len(rel_pts)}")
 
-        # ───── ModifiedFloat32MultiArray 작성 ─────
-        msg = ModifiedFloat32MultiArray()
+        # ───── TrackedConeArray 작성 ─────
+        out = TrackedConeArray()
+        out.header.stamp = self.get_clock().now().to_msg()
+        out.header.frame_id = "os_sensor"
 
-        # Header
-        msg.header.stamp = self.get_clock().now().to_msg()
-        msg.header.frame_id = "os_sensor"
+        # 간단히 인덱스를 track_id로 사용(필요시 고정 ID 로직으로 교체 가능)
+        for idx, (x, y, _) in enumerate(rel_pts):
+            tc = TrackedCone()
+            tc.track_id = idx
+            tc.position = Point(x=float(x), y=float(y), z=0.0)
+            tc.color = "Unknown"
+            out.cones.append(tc)
 
-        # Data (x,y,z=0) 3-tuple 반복
-        msg.data = [
-            coord for (x, y, _) in rel_pts for coord in (float(x), float(y), 0.0)
-        ]
-
-        # class_names (색상 안 쓰므로 'cone' 통일)
-        n_cones = len(rel_pts)
-        msg.class_names = ["Unknown"] * n_cones
-
-        # Layout: 2차원 [cones] × [xyz]
-        dim_cone = MultiArrayDimension(
-            label="cones", size=n_cones, stride=3 * n_cones
-        )
-        dim_xyz = MultiArrayDimension(label="xyz", size=3, stride=3)
-        msg.layout = MultiArrayLayout(
-            dim=[dim_cone, dim_xyz],
-            data_offset=0,
-        )
-
-        self.pub_cone.publish(msg)
+        self.pub_cone.publish(out)
 
         # ROI 마커 time stamp 업데이트
         roi_mk = self._roi_marker_template
-        roi_mk.header.stamp = msg.header.stamp
+        roi_mk.header.stamp = out.header.stamp
         self.pub_roi.publish(roi_mk)
 
 
