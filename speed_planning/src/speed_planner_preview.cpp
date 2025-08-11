@@ -10,10 +10,18 @@
 
 /*
 cmd_lookahead_time(기본 0.3s), cmd_lookahead_min/max(0.5~3.0m)를 먼저 만져보세요.
-
 하드웨어가 민감하면 cmd_rate_up=1.0, cmd_rate_down=2.0처럼 더 보수적으로.
-
 로컬 경로가 항상 ego에서 시작하지 않는 구조라면, 나중에 /current_pose(혹은 odom)를 받아 가장 가까운 인덱스(i0) + i_ahead로 바꾸면 더 정확해집니다.
+*/
+
+/*
+speed[] 벡터는 앞으로 갈 M개 지점의 목표 속도 프로파일
+그 중 speed[0] 은 현재 시점(즉, 다음 제어 사이클에서 적용할) 즉시 목표 속도
+하드웨어 제어 노드는 이 값을 받아서 실제 차량이 그 속도로 가도록 제어
+즉, 한 문장으로 말하면:
+"모든 제약 조건을 반영해 계산한 속도 프로파일의 첫 번째 값(speed[0])을 하드웨어 제어 파트에 전달한다."
+
+하드웨어 제어 파트에 전달하는 속도값은 **최종 속도 프로파일의 첫 번째 값(speed[0])**
 */
 
 class LocalSpeedPlannerPreview : public rclcpp::Node
