@@ -1,22 +1,26 @@
 /************************************************************
- * classify_cones_by_side.cpp  (ROS 2 Humble)
- * KD‑Tree + OpenMP 버전 — 컴파일 에러 수정
+ * classify_cones_by_side.cpp  (ROS 2 Humble)
+ * KD-Tree + OpenMP 버전 — TrackedConeArray 구독으로 변경
  ***********************************************************/
 
  #include <rclcpp/rclcpp.hpp>
  #include <visualization_msgs/msg/marker.hpp>
  #include <geometry_msgs/msg/point.hpp>
- #include <custom_interface/msg/modified_float32_multi_array.hpp>
+ 
+ // NEW: 새 커스텀 메시지
+ #include <custom_interface/msg/tracked_cone_array.hpp>
  
  #include <tf2_ros/transform_listener.h>
  #include <tf2_ros/buffer.h>
+ #include <tf2/exceptions.h>
  
  #include <Eigen/Dense>
  #include <nanoflann.hpp>
  #include <algorithm>
  #include <memory>
  #include <vector>
-
+ #include <limits>
+ 
  constexpr double N_MAX = 4.0;   // lateral 한계 [m]  ← 원하는 폭으로 조정
  // N_MAX 값은 경로로부터 너무 멀리 떨어진 콘을 필터링하는 데 사용됨.
  // N_MAX : 경로로부터 콘이 얼마나 멀리 떨어져 있는지에 대한 최대 허용 거리(경로폭/2)
@@ -28,10 +32,10 @@
  using rclcpp::Node;
  using visualization_msgs::msg::Marker;
  using geometry_msgs::msg::Point;
- using custom_interface::msg::ModifiedFloat32MultiArray;
+ using custom_interface::msg::TrackedConeArray;   // NEW
  using std::placeholders::_1;
  
- /* ===== KD‑Tree adaptor (Eigen row‑major) ===== */
+ /* ===== KD-Tree adaptor (Eigen row-major) ===== */
  using PathMat = Eigen::Matrix<double, Eigen::Dynamic, 2, Eigen::RowMajor>;
  using KDTree  = nanoflann::KDTreeEigenMatrixAdaptor<PathMat>;
  
@@ -47,14 +51,15 @@
          "/global_path_marker", 10,
          std::bind(&ConeSideClassifier::cbPath, this, _1));
  
-     sub_cone_ = create_subscription<ModifiedFloat32MultiArray>(
-         "/sorted_cones_time", 10,
+     // NEW: TrackedConeArray 구독으로 변경
+     sub_cone_ = create_subscription<TrackedConeArray>(
+         "/sorted_cones_time_ukf", 10,
          std::bind(&ConeSideClassifier::cbCones, this, _1));
  
      pub_left_  = create_publisher<Marker>("/left_cone_marker",  1);
      pub_right_ = create_publisher<Marker>("/right_cone_marker", 1);
  
-     RCLCPP_INFO(get_logger(), "ConeSideClassifier (KD‑Tree) started");
+     RCLCPP_INFO(get_logger(), "ConeSideClassifier (KD-Tree, TrackedConeArray) started");
    }
  
  private:
@@ -63,7 +68,7 @@
    {
      if (msg->type != Marker::LINE_STRIP || msg->points.size() < 2) return;
  
-     constexpr double STEP = 0.20;   // 20 cm
+     constexpr double STEP = 0.20;   // 20 cm
      PathMat new_path; new_path.resize(0, 2);
  
      double acc = 0.0;
@@ -84,11 +89,11 @@
      kd_tree_->index->buildIndex();
  
      RCLCPP_INFO_THROTTLE(get_logger(), *get_clock(), 3000,
-                          "경로 갱신 & KD‑Tree 구축: %zu pts", path_pts_.rows());
+                          "경로 갱신 & KD-Tree 구축: %zu pts", path_pts_.rows());
    }
  
-   /* ---------- 콘 콜백 ---------- */
-   void cbCones(const ModifiedFloat32MultiArray::SharedPtr msg)
+   /* ---------- 콘 콜백 (TrackedConeArray) ---------- */
+   void cbCones(const TrackedConeArray::SharedPtr msg)
    {
      if (!kd_tree_) return;
  
@@ -111,9 +116,11 @@
  
      /* 센서 → reference */
      std::vector<Eigen::Vector2d> cones_ref;
-     cones_ref.reserve(msg->data.size() / 3);
-     for (size_t i=0; i+2<msg->data.size(); i+=3) {
-       Eigen::Vector3d ps(msg->data[i], msg->data[i+1], 0.0);
+     cones_ref.reserve(msg->cones.size());
+ 
+     // NEW: 평탄화 배열 → 명시적 필드 접근
+     for (const auto &c : msg->cones) {
+       Eigen::Vector3d ps(c.position.x, c.position.y, c.position.z);
        Eigen::Vector3d pr = R*ps + t;
        cones_ref.emplace_back(pr.x(), pr.y());
      }
@@ -124,57 +131,58 @@
  
      /* 마커 발행 */
      auto stamp = get_clock()->now();
-     publishMarker(pub_left_,  left_pts,  stamp, 0.0f, 0.3f, 1.0f);
-     publishMarker(pub_right_, right_pts, stamp, 1.0f, 1.0f, 0.0f);
+     publishMarker(pub_left_,  left_pts,  stamp, 0.0f, 0.3f, 1.0f); // 파랑
+     publishMarker(pub_right_, right_pts, stamp, 1.0f, 1.0f, 0.0f); // 노랑
    }
  
-   /* ---------- KD‑Tree Frenet 분류 ---------- */
+   /* ---------- KD-Tree Frenet 분류 ---------- */
    void classifyCones(const std::vector<Eigen::Vector2d>& cones,
-    std::vector<Eigen::Vector2d>& left_out,
-    std::vector<Eigen::Vector2d>& right_out) const
-    {
-    constexpr size_t K = 1;
-    std::vector<long int> idx(K);
-    std::vector<double>   d2 (K);
-    size_t segN = path_pts_.rows() - 1;
-
-    for (const auto &c : cones)
-    {
-    kd_tree_->index->knnSearch(c.data(), K, idx.data(), d2.data());
-    size_t near_idx = static_cast<size_t>(idx[0]);
-
-    /* 후보 세그먼트 */
-    size_t best_i  = near_idx;
-    double best_d2 = std::numeric_limits<double>::max();
-    Eigen::Vector2d best_proj;
-
-    for (int off=-1; off<=0; ++off) {
-    long si = static_cast<long>(near_idx) + off;
-    if (si<0 || static_cast<size_t>(si)>=segN) continue;
-    size_t i = static_cast<size_t>(si);
-    Eigen::Vector2d p = path_pts_.row(i);
-    Eigen::Vector2d q = path_pts_.row(i+1);
-    Eigen::Vector2d v = q - p;
-    double v2 = v.squaredNorm(); if (v2==0.0) continue;
-    double u = std::clamp(((c-p).dot(v))/v2, 0.0, 1.0);
-    Eigen::Vector2d proj = p + u*v;
-    double dist2 = (c - proj).squaredNorm();
-    if (dist2 < best_d2) { best_d2 = dist2; best_i = i; best_proj = proj; }
-    }
-
-    Eigen::Vector2d t_hat = path_pts_.row(best_i+1) - path_pts_.row(best_i);
-    Eigen::Vector2d d_vec = c - best_proj;
-    double z = t_hat.x()*d_vec.y() - t_hat.y()*d_vec.x();
-
-    /* ★★★★★ lateral 거리 n 계산 & 필터 ★★★★★ */
-    double n = (z >= 0 ? 1.0 : -1.0) * std::sqrt(best_d2);
-    if (std::abs(n) > N_MAX) continue;   // 필터: 경로로부터 너무 멀면 스킵
-    /* ★★★★★-----------------------------------------------------*/
-
-    (z > 0 ? left_out : right_out).push_back(c);
-    }
-    }
-
+                      std::vector<Eigen::Vector2d>& left_out,
+                      std::vector<Eigen::Vector2d>& right_out) const
+   {
+     if (path_pts_.rows() < 2) return;
+ 
+     constexpr size_t K = 1;
+     std::vector<long int> idx(K);
+     std::vector<double>   d2 (K);
+     size_t segN = path_pts_.rows() - 1;
+ 
+     for (const auto &c : cones)
+     {
+       kd_tree_->index->knnSearch(c.data(), K, idx.data(), d2.data());
+       size_t near_idx = static_cast<size_t>(idx[0]);
+ 
+       /* 후보 세그먼트 */
+       size_t best_i  = near_idx;
+       double best_d2 = std::numeric_limits<double>::max();
+       Eigen::Vector2d best_proj = Eigen::Vector2d::Zero();
+ 
+       for (int off = -1; off <= 0; ++off) {
+         long si = static_cast<long>(near_idx) + off;
+         if (si < 0 || static_cast<size_t>(si) >= segN) continue;
+         size_t i = static_cast<size_t>(si);
+         Eigen::Vector2d p = path_pts_.row(i);
+         Eigen::Vector2d q = path_pts_.row(i+1);
+         Eigen::Vector2d v = q - p;
+         double v2 = v.squaredNorm(); if (v2 == 0.0) continue;
+         double u = std::clamp(((c - p).dot(v)) / v2, 0.0, 1.0);
+         Eigen::Vector2d proj = p + u * v;
+         double dist2 = (c - proj).squaredNorm();
+         if (dist2 < best_d2) { best_d2 = dist2; best_i = i; best_proj = proj; }
+       }
+ 
+       Eigen::Vector2d t_hat = path_pts_.row(best_i+1) - path_pts_.row(best_i);
+       Eigen::Vector2d d_vec = c - best_proj;
+       double z = t_hat.x() * d_vec.y() - t_hat.y() * d_vec.x();
+ 
+       /* ★★★★★ lateral 거리 n 계산 & 필터 ★★★★★ */
+       double n = (z >= 0 ? 1.0 : -1.0) * std::sqrt(best_d2);
+       if (std::abs(n) > N_MAX) continue;   // 필터: 경로로부터 너무 멀면 스킵
+       /* ★★★★★-----------------------------------------------------*/
+ 
+       (z > 0 ? left_out : right_out).push_back(c);
+     }
+   }
  
    /* ---------- 마커 작성 ---------- */
    void publishMarker(const rclcpp::Publisher<Marker>::SharedPtr &pub,
@@ -196,29 +204,29 @@
      for (const auto &p : pts) {
        Point pt; pt.x = p.x(); pt.y = p.y(); pt.z = 0.0;
        mk.points.push_back(pt);
-      }
-      pub->publish(mk);
-    }
-  
-    /* ---------- 멤버 ---------- */
-    rclcpp::Subscription<Marker>::SharedPtr                    sub_path_;
-    rclcpp::Subscription<ModifiedFloat32MultiArray>::SharedPtr sub_cone_;
-    rclcpp::Publisher<Marker>::SharedPtr                       pub_left_;
-    rclcpp::Publisher<Marker>::SharedPtr                       pub_right_;
-  
-    tf2_ros::Buffer            tf_buffer_;
-    tf2_ros::TransformListener tf_listener_;
-  
-    PathMat                    path_pts_;   // [N,2]  (row‑major)
-    std::unique_ptr<KDTree>    kd_tree_;    // KD‑Tree 인덱스
-  };
-  
-  /* ---------------- main ---------------- */
-  int main(int argc, char **argv)
-  {
-    rclcpp::init(argc, argv);
-    rclcpp::spin(std::make_shared<ConeSideClassifier>());
-    rclcpp::shutdown();
-    return 0;
-  }
-  
+     }
+     pub->publish(mk);
+   }
+ 
+   /* ---------- 멤버 ---------- */
+   rclcpp::Subscription<Marker>::SharedPtr                    sub_path_;
+   rclcpp::Subscription<TrackedConeArray>::SharedPtr          sub_cone_;  // NEW
+   rclcpp::Publisher<Marker>::SharedPtr                       pub_left_;
+   rclcpp::Publisher<Marker>::SharedPtr                       pub_right_;
+ 
+   tf2_ros::Buffer            tf_buffer_;
+   tf2_ros::TransformListener tf_listener_;
+ 
+   PathMat                    path_pts_;   // [N,2]  (row-major)
+   std::unique_ptr<KDTree>    kd_tree_;    // KD-Tree 인덱스
+ };
+ 
+ /* ---------------- main ---------------- */
+ int main(int argc, char **argv)
+ {
+   rclcpp::init(argc, argv);
+   rclcpp::spin(std::make_shared<ConeSideClassifier>());
+   rclcpp::shutdown();
+   return 0;
+ }
+ 
