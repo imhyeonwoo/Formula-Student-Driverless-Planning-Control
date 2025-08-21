@@ -34,7 +34,7 @@ public:
   , have_last_cmd_(false)
   {
     // Parameters
-    declare_parameter<double>("max_speed",       20.0);   // [m/s]
+    declare_parameter<double>("max_speed",       10.0);   // [m/s]
     declare_parameter<double>("max_accel",        3.0);   // [m/s^2]
     declare_parameter<double>("max_decel",        3.0);   // [m/s^2]
     declare_parameter<double>("max_lat_accel",    2.5);   // [m/s^2]
