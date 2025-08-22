@@ -88,7 +88,7 @@ public:
         std::bind(&LocalSpeedPlannerPreview::pathCallback, this, std::placeholders::_1));
 
     speed_sub_ = create_subscription<std_msgs::msg::Float32>(
-        "/current_speed", rclcpp::SensorDataQoS(),
+        "/current_speed/odom", rclcpp::SensorDataQoS(),
         std::bind(&LocalSpeedPlannerPreview::speedCallback, this, std::placeholders::_1));
   }
 
