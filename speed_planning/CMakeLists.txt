@@ -30,11 +30,17 @@ add_executable(gps_speed_node src/gps_speed_node.cpp)
 ament_target_dependencies(gps_speed_node 
   rclcpp sensor_msgs std_msgs)
 
+add_executable(current_speed_from_odom_node src/current_speed_from_odom.cpp)
+ament_target_dependencies(current_speed_from_odom_node
+    rclcpp std_msgs nav_msgs
+)
+
 install(TARGETS 
   speed_planner
   global_speed_planner
   speed_planner_preview
   gps_speed_node 
+  current_speed_from_odom_node
   DESTINATION lib/${PROJECT_NAME})
 
 ament_package()
