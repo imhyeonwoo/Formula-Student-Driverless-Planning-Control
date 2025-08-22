@@ -35,7 +35,7 @@ ament_target_dependencies(
 add_executable(vehicle_tf_broadcaster_node src/vehicle_tf_broadcaster.cpp)
 ament_target_dependencies(
   vehicle_tf_broadcaster_node
-  rclcpp geometry_msgs std_msgs tf2 tf2_ros)
+  rclcpp geometry_msgs std_msgs tf2 tf2_ros nav_msgs)
 
 add_executable(status_colored_path_publisher_node src/status_colored_path_publisher.cpp)
 ament_target_dependencies(status_colored_path_publisher_node

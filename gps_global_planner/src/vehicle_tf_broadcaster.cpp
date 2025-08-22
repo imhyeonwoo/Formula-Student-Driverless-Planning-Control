@@ -6,16 +6,17 @@
 #include "rclcpp/rclcpp.hpp"
 #include "geometry_msgs/msg/point_stamped.hpp"
 #include "geometry_msgs/msg/transform_stamped.hpp"
-#include "std_msgs/msg/float32.hpp"
+#include "nav_msgs/msg/odometry.hpp"  // ★ 추가
 
 #include "tf2/LinearMath/Quaternion.h"
+#include "tf2/LinearMath/Matrix3x3.h" // ★ 추가
 #include "tf2_ros/transform_broadcaster.h"
 #include "tf2_ros/static_transform_broadcaster.h"
 
 using std::placeholders::_1;
 using geometry_msgs::msg::PointStamped;
-using std_msgs::msg::Float32;
 using geometry_msgs::msg::TransformStamped;
+using nav_msgs::msg::Odometry;
 
 class VehicleTFBroadcaster : public rclcpp::Node
 {
@@ -54,8 +55,10 @@ public:
     /* ---- I/O ---- */
     sub_xy_ = create_subscription<PointStamped>(
         "local_xy", 10, std::bind(&VehicleTFBroadcaster::cbXY, this, _1));
-    sub_yaw_ = create_subscription<Float32>(
-        "global_yaw", 10, std::bind(&VehicleTFBroadcaster::cbYaw, this, _1));
+
+    // ★ /odometry/filtered 구독 (쿼터니언 → yaw)
+    sub_odom_ = create_subscription<Odometry>(
+        "/odometry/filtered", 10, std::bind(&VehicleTFBroadcaster::cbOdom, this, _1));
 
     using namespace std::chrono_literals;
     timer_ = create_wall_timer(50ms,
@@ -83,9 +86,15 @@ private:
     z_gps_or_base_ = msg->point.z;  // 현재 파이프라인에선 보통 0.0
   }
 
-  void cbYaw(const Float32::SharedPtr msg)
+  // ★ 오도메트리에서 yaw 추출
+  void cbOdom(const Odometry::SharedPtr msg)
   {
-    yaw_ = msg->data; // 라디안 가정. (deg라면 외부에서 변환하거나 여기서 변환 처리)
+    const auto &q_msg = msg->pose.pose.orientation;
+    tf2::Quaternion q(q_msg.x, q_msg.y, q_msg.z, q_msg.w);
+
+    double roll, pitch, yaw;
+    tf2::Matrix3x3(q).getRPY(roll, pitch, yaw);
+    yaw_ = yaw;  // 라디안
   }
 
   void timerCB()
@@ -115,12 +124,12 @@ private:
     t.transform.translation.y = base_y;
     t.transform.translation.z = base_z;
 
-    tf2::Quaternion q;
-    q.setRPY(0.0, 0.0, yaw_); // roll/pitch=0 가정
-    t.transform.rotation.x = q.x();
-    t.transform.rotation.y = q.y();
-    t.transform.rotation.z = q.z();
-    t.transform.rotation.w = q.w();
+    tf2::Quaternion q_out;
+    q_out.setRPY(0.0, 0.0, yaw_); // roll/pitch=0 가정
+    t.transform.rotation.x = q_out.x();
+    t.transform.rotation.y = q_out.y();
+    t.transform.rotation.z = q_out.z();
+    t.transform.rotation.w = q_out.w();
 
     tf_broadcaster_.sendTransform(t);
   }
@@ -169,7 +178,7 @@ private:
   double base_z_level_{0.0};
 
   rclcpp::Subscription<PointStamped>::SharedPtr sub_xy_;
-  rclcpp::Subscription<Float32>::SharedPtr      sub_yaw_;
+  rclcpp::Subscription<Odometry>::SharedPtr     sub_odom_; // ★ 추가
 
   tf2_ros::TransformBroadcaster       tf_broadcaster_;
   tf2_ros::StaticTransformBroadcaster static_broadcaster_;
