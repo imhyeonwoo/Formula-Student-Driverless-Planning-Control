@@ -9,15 +9,16 @@ import os
 
 def generate_launch_description():
     # ───────────────── 기준 좌표 파라미터 선언 ─────────────────
-    ref_lat_arg = DeclareLaunchArgument('ref_lat', default_value='37.540190')
-    ref_lon_arg = DeclareLaunchArgument('ref_lon', default_value='127.076488')
+    ref_lat_arg = DeclareLaunchArgument('ref_lat', default_value='37.540091')
+    ref_lon_arg = DeclareLaunchArgument('ref_lon', default_value='127.076555')
     ref_lat = LaunchConfiguration('ref_lat')
     ref_lon = LaunchConfiguration('ref_lon')
+    # 기본 좌표는 건국대학교 일감호 와우도 기준 : (37.540091, 127.076555)
 
     # ───────────────── CSV 기본 경로 구성 ───────────────────────
     csv_default = os.path.join(
         get_package_share_directory('gps_global_planner'),
-        'data', '4planning_250722_nocheon_rtk_curved.csv'
+        'data', 'nocheon.csv'
     )
     csv_arg       = DeclareLaunchArgument('csv_file', default_value=csv_default)
     csv_file      = LaunchConfiguration('csv_file')
