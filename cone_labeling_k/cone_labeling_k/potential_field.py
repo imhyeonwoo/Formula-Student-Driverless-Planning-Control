@@ -66,13 +66,13 @@ class PotentialFieldLabeler(Node):
         # ----- Data -----#
         self.unknown_sub = self.create_subscription(
             TrackedConeArray,
-            '/sorted_cones_time_ukf',
+            '/cone/lidar/ukf',
             self.cones_callback,
             qos)
         
         self.red_sub = self.create_subscription(
             TrackedConeArray,
-            '/fused_sorted_cones_ukf',
+            '/cone/fused/ukf',
             self.red_callback,
             qos)
         
