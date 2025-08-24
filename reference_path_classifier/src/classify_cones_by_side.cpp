@@ -94,15 +94,15 @@ private:
   {
     if (!kd_tree_) return;
 
-    // ★ TF(reference ← cone_frame) : 메시지의 frame_id를 그대로 사용
+    // ★ TF(map ← cone_frame) : 메시지의 frame_id를 그대로 사용
     const std::string cone_frame = msg->header.frame_id.empty() ? "os_sensor" : msg->header.frame_id;
 
     geometry_msgs::msg::TransformStamped tf;
     try {
-      tf = tf_buffer_.lookupTransform("reference", cone_frame, rclcpp::Time(0));
+      tf = tf_buffer_.lookupTransform("map", cone_frame, rclcpp::Time(0));
     } catch (const tf2::TransformException &e) {
       RCLCPP_WARN_THROTTLE(get_logger(), *get_clock(), 2000,
-                           "TF(reference←%s) 미획득… (%s)", cone_frame.c_str(), e.what());
+                           "TF(map←%s) 미획득… (%s)", cone_frame.c_str(), e.what());
       return;
     }
 
@@ -113,7 +113,7 @@ private:
                       tf.transform.translation.y,
                       tf.transform.translation.z);
 
-    /* 센서 → reference */
+    /* 센서 → map */
     std::vector<Eigen::Vector2d> cones_ref;
     cones_ref.reserve(msg->cones.size());
 
@@ -189,7 +189,7 @@ private:
   {
     Marker mk;
     mk.header.stamp = stamp;
-    mk.header.frame_id = "reference";
+    mk.header.frame_id = "map";
     mk.ns   = "cone_side";
     mk.id   = (r > b ? 1 : 0);
     mk.type = Marker::SPHERE_LIST;
