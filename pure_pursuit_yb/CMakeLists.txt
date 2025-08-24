@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.8)
-project(pure_pursuit)
+project(pure_pursuit_yb)
 
 set(CMAKE_CXX_STANDARD 17)
 add_compile_options(-Wall -Wextra -Wpedantic)

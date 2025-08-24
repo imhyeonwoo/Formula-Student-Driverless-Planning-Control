@@ -59,7 +59,7 @@ public:
 
     // ===== 퍼블리셔 =====
     steering_pub_ = this->create_publisher<std_msgs::msg::Float32>("/steering_angle", 10);
-    speed_pub_ = this->create_publisher<std_msgs::msg::Float32>("/speed", 10);
+    speed_pub_ = this->create_publisher<std_msgs::msg::Float32>("/current_speed", 10);
     lookahead_marker_pub_ = this->create_publisher<visualization_msgs::msg::Marker>("/lookahead_point_marker", 10);
 
     // ===== 제어 타이머 =====
@@ -116,8 +116,8 @@ private:
     lookahead_marker.scale.y = 0.5;
     lookahead_marker.scale.z = 0.5;
 
-    lookahead_marker.color.r = 1.0f;
-    lookahead_marker.color.g = 0.0f;
+    lookahead_marker.color.r = 0.0f;
+    lookahead_marker.color.g = 1.0f;
     lookahead_marker.color.b = 1.0f;
     lookahead_marker.color.a = 1.0f;
 

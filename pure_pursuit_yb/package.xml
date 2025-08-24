@@ -1,6 +1,6 @@
 <?xml version="1.0"?>
 <package format="3">
-  <name>pure_pursuit</name>
+  <name>pure_pursuit_yb</name>
   <version>0.0.0</version>
   <description>A ROS 2 package for Pure Pursuit path tracking algorithm.</description>
   <maintainer email="you@example.com">Your Name</maintainer>
