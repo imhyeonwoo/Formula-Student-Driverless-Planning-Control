@@ -1,0 +1,4 @@
+purepursuit_control:
+  ros__parameters:
+    LAD: 2.0
+    WHEELBASE: 3.0
