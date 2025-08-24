@@ -111,7 +111,7 @@ private:
   {
     Marker mk;
     mk.header.stamp    = now();
-    mk.header.frame_id = "reference";
+    mk.header.frame_id = "map";
     mk.ns   = "cov_path"; mk.id = 0;
     mk.type = Marker::LINE_STRIP; mk.action = Marker::ADD;
     mk.scale.x = 0.1;                       // 선 두께

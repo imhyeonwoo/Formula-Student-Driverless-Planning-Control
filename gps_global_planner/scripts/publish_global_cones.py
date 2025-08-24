@@ -37,7 +37,7 @@ class GlobalConePublisher(Node):
         # 127.0505869,37.5573749  ← 동일 기준점
         self.declare_parameter("ref_lat", 37.540190)
         self.declare_parameter("ref_lon", 127.076488)
-        self.declare_parameter("frame_id", "reference")        # ✨
+        self.declare_parameter("frame_id", "map")        # ✨
 
         # ────── 매개변수 읽기 ──────
         csv_file = self.get_parameter("csv_file").value

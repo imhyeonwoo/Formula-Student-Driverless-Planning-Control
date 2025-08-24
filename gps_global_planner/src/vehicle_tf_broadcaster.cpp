@@ -27,7 +27,7 @@ public:
     static_broadcaster_(this)
   {
     /* ---- 파라미터 ---- */
-    // base_link -> gps_antenna
+    // base_link -> gps
     declare_parameter("antenna_offset_x", 0.0);
     declare_parameter("antenna_offset_y", 0.0);
     declare_parameter("antenna_offset_z", 3.0);
@@ -64,12 +64,12 @@ public:
     timer_ = create_wall_timer(50ms,
         std::bind(&VehicleTFBroadcaster::timerCB, this));
 
-    // 정적 TF: base_link → {gps_antenna, os_sensor}
+    // 정적 TF: base_link → {gps, os_sensor}
     broadcastStaticTFs();
 
     RCLCPP_INFO(get_logger(),
       "VehicleTFBroadcaster started (20 Hz)\n"
-      "  base_link->gps_antenna offset = [%.3f, %.3f, %.3f] m\n"
+      "  base_link->gps offset = [%.3f, %.3f, %.3f] m\n"
       "  base_link->os_sensor   offset = [%.3f, %.3f, %.3f] m\n"
       "  fix_base_z_to_zero=%s (base_z_level=%.3f)",
       antenna_offset_x_, antenna_offset_y_, antenna_offset_z_,
@@ -99,7 +99,7 @@ private:
 
   void timerCB()
   {
-    // 동적 TF: reference -> base_link
+    // 동적 TF: map -> base_link
     // local_xy가 GPS 안테나 위치라면 base = gps - R(yaw)*offset(base->gps)
     const double cy = std::cos(yaw_);
     const double sy = std::sin(yaw_);
@@ -117,7 +117,7 @@ private:
 
     TransformStamped t;
     t.header.stamp    = now();
-    t.header.frame_id = "reference";
+    t.header.frame_id = "map";
     t.child_frame_id  = "base_link";
 
     t.transform.translation.x = base_x;
@@ -134,17 +134,17 @@ private:
     tf_broadcaster_.sendTransform(t);
   }
 
-  /* ---- 정적 TF: base_link → {gps_antenna, os_sensor} ---- */
+  /* ---- 정적 TF: base_link → {gps, os_sensor} ---- */
   void broadcastStaticTFs()
   {
     std::vector<TransformStamped> vec;
 
-    // base_link -> gps_antenna
+    // base_link -> gps
     {
       TransformStamped t;
       t.header.stamp    = now();
       t.header.frame_id = "base_link";
-      t.child_frame_id  = "gps_antenna";
+      t.child_frame_id  = "gps";
       t.transform.translation.x = antenna_offset_x_;
       t.transform.translation.y = antenna_offset_y_;
       t.transform.translation.z = antenna_offset_z_;

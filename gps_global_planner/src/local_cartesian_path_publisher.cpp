@@ -149,7 +149,7 @@ private:
 
     Path path;
     path.header.stamp = now;
-    path.header.frame_id = "reference";
+    path.header.frame_id = "map";
 
     for (auto &p : points_) {
       PoseStamped ps;

@@ -29,7 +29,7 @@ def generate_launch_description():
 
     # ───────────────── 오프셋/높이 고정 파라미터 선언 ─────────────────
     # base_link : 차량 후륜축 중심
-    # GPS Antenna 위치(base_link -> gps_antenna)
+    # GPS Antenna 위치(base_link -> gps)
     ant_x_arg = DeclareLaunchArgument('antenna_offset_x', default_value='0.9')
     ant_y_arg = DeclareLaunchArgument('antenna_offset_y', default_value='0.0')
     ant_z_arg = DeclareLaunchArgument('antenna_offset_z', default_value='1.0')

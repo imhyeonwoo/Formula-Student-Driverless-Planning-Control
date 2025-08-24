@@ -76,7 +76,7 @@ class ReferencePathPlanner(Node):
 
         # ── TF --------------------------------------------------
         self.sensor_frame = "base_link"
-        self.ref_frame = "reference"
+        self.ref_frame = "map"
         self.tf_buf = tf2_ros.Buffer(cache_time=Duration(seconds=2))
         self.tf_lst = tf2_ros.TransformListener(self.tf_buf, self)
 
@@ -220,7 +220,7 @@ class ReferencePathPlanner(Node):
         except (tf2_ros.LookupException, tf2_ros.ExtrapolationException):
             if not self._tf_warned:
                 self.get_logger().warning(
-                    "TF(sensor←reference) unavailable – waiting…"
+                    "TF(sensor←map) unavailable – waiting…"
                 )
                 self._tf_warned = True
             return

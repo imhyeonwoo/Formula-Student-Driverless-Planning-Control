@@ -3,8 +3,8 @@
 """
 cone_roi_publisher.py  (updated 2025-08-11)
 
-• CSV의 WGS84 콘 절대좌표 → reference 평면(x,y) 변환
-• TF(reference→gps_antenna→os_sensor)로 os_sensor 상대좌표 계산
+• CSV의 WGS84 콘 절대좌표 → map 평면(x,y) 변환
+• TF(map→gps_antenna→os_sensor)로 os_sensor 상대좌표 계산
 • 전방 180°(x ≥ 0) & 반경 roi_radius 이내 콘만 선택
 • /sorted_cones_time_ukf (TrackedConeArray) 로 퍼블리시
 • /lidar_roi_marker  (visualization_msgs/Marker) 로 ROI 부채꼴 시각화
@@ -134,13 +134,13 @@ class ConeROIPublisher(Node):
 
     # --------------------------------------------------------------
     def timer_cb(self):
-        # TF(reference → os_sensor)
+        # TF(map → os_sensor)
         try:
             tf = self.tf_buf.lookup_transform(
-                "reference", "os_sensor", rclpy.time.Time()
+                "map", "os_sensor", rclpy.time.Time()
             )
         except (tf2_ros.LookupException, tf2_ros.ExtrapolationException):
-            self.get_logger().warn_once("TF(reference→os_sensor) 미획득…")
+            self.get_logger().warn_once("TF(map→os_sensor) 미획득…")
             return
 
         t = tf.transform.translation

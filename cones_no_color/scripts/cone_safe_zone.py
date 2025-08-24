@@ -3,8 +3,8 @@
 """
 cone_safe_zone.py  ─ TF 적용 & 면(scale) 보정
 ─────────────────────────────────────────────────────────────
-1) /left_cone_marker · /right_cone_marker  (reference, SPHERE_LIST)
-2) reference → os_sensor 변환
+1) /left_cone_marker · /right_cone_marker  (map, SPHERE_LIST)
+2) map → os_sensor 변환
 3) /cone_radius_rings   (MarkerArray, CYLINDER)
    /drivable_corridor   (Marker,       TRIANGLE_LIST & LINE_STRIP)
 """
@@ -25,7 +25,7 @@ class ConeSafeZone(Node):
         super().__init__("cone_safe_zone")
 
         # ─ Parameters ─────────────────────────────────────────
-        self.declare_parameter("reference_frame", "reference")
+        self.declare_parameter("reference_frame", "map")
         self.declare_parameter("sensor_frame",    "os_sensor")
         self.declare_parameter("default_radius",   1.2)
         self.declare_parameter("corridor_res",       120)
