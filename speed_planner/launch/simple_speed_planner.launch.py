@@ -25,10 +25,10 @@ def generate_launch_description():
         'gear_ratio', default_value='4.6', description='Motor:wheel gear ratio'
     )
     desired_rpm_topic_arg = DeclareLaunchArgument(
-        'desired_rpm_topic', default_value='/desired_rpm', description='Desired RPM topic'
+        'desired_rpm_topic', default_value='/cmd/rpm', description='Desired RPM topic'
     )
     desired_speed_topic_arg = DeclareLaunchArgument(
-        'desired_speed_topic', default_value='/desired_speed', description='Desired speed topic (m/s)'
+        'desired_speed_topic', default_value='/cmd/speed', description='Desired speed topic (m/s)'
     )
     desired_pub_rate_arg = DeclareLaunchArgument(
         'desired_pub_rate_hz', default_value='50.0', description='Desired command publish rate (Hz)'

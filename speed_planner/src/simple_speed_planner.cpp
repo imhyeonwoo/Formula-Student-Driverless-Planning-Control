@@ -16,10 +16,10 @@ public:
     path_topic_ = declare_parameter<std::string>("path_topic", "/local_planned_path");
     speed_topic_ = declare_parameter<std::string>("speed_topic", "/current_speed");
     out_topic_ = declare_parameter<std::string>("out_topic", "/desired_speed_profile");
-    desired_speed_topic_ = declare_parameter<std::string>("desired_speed_topic", "/desired_speed");
+    desired_speed_topic_ = declare_parameter<std::string>("desired_speed_topic", "/cmd/speed");
 
     // [ADD] RPM 관련 파라미터
-    desired_rpm_topic_ = declare_parameter<std::string>("desired_rpm_topic", "/desired_rpm");
+    desired_rpm_topic_ = declare_parameter<std::string>("desired_rpm_topic", "/cmd/rpm");
     wheel_diameter_m_ = declare_parameter<double>("wheel_diameter_m", 0.47);       // 47 cm
     gear_ratio_motor_to_wheel_ = declare_parameter<double>("gear_ratio", 4.6);     // 모터:바퀴
 
@@ -55,7 +55,7 @@ public:
     // Pub/Sub
     pub_profile_ = create_publisher<std_msgs::msg::Float32MultiArray>(out_topic_, 10);
     pub_desired_ = create_publisher<std_msgs::msg::Float32>(desired_speed_topic_, 10);
-    // [ADD] /desired_rpm 퍼블리셔
+    // [ADD] /cmd/rpm 퍼블리셔
     pub_desired_rpm_ = create_publisher<std_msgs::msg::Float32>(desired_rpm_topic_, 10);
 
     sub_path_ = create_subscription<nav_msgs::msg::Path>(

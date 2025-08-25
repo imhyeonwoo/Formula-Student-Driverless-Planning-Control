@@ -27,10 +27,10 @@ public:
     path_topic_ = declare_parameter<std::string>("path_topic", "/local_planned_path");
     speed_topic_ = declare_parameter<std::string>("speed_topic", "/current_speed");
     out_topic_ = declare_parameter<std::string>("out_topic", "/desired_speed_profile");
-    desired_speed_topic_ = declare_parameter<std::string>("desired_speed_topic", "/desired_speed");
+    desired_speed_topic_ = declare_parameter<std::string>("desired_speed_topic", "/cmd/speed");
 
     // RPM 변환 파라미터
-    desired_rpm_topic_ = declare_parameter<std::string>("desired_rpm_topic", "/desired_rpm");
+    desired_rpm_topic_ = declare_parameter<std::string>("desired_rpm_topic", "/cmd/rpm");
     wheel_diameter_m_ = declare_parameter<double>("wheel_diameter_m", 0.47);
     gear_ratio_motor_to_wheel_ = declare_parameter<double>("gear_ratio", 4.6);
 
