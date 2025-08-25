@@ -4,7 +4,7 @@
 // • 입력 2: /now_speed (std_msgs/Float32)  ★ 현재 속도
 // • 입력 3: TF (reference -> base_link, base_link -> os_sensor)
 //
-// • 출력 1: /steering_angle (std_msgs/Float32, [deg])
+// • 출력 1: /cmd/steering_angle (std_msgs/Float32, [deg])
 // • 출력 2: /lookahead_point_marker (visualization_msgs/Marker)
 //
 // • 핵심 로직: 속도 비례 동적 Ld를 적용한 Pure Pursuit 알고리즘
@@ -64,7 +64,7 @@ public:
     );
 
     // ===== 퍼블리셔 =====
-    steering_pub_ = this->create_publisher<std_msgs::msg::Float32>("/steering_angle", 10);
+    steering_pub_ = this->create_publisher<std_msgs::msg::Float32>("/cmd/steering_angle", 10);
     lookahead_marker_pub_ = this->create_publisher<visualization_msgs::msg::Marker>("/lookahead_point_marker", 10);
 
     // ===== 제어 타이머 =====

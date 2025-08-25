@@ -3,7 +3,7 @@
 // • 입력 1: /local_planned_path (nav_msgs/Path)
 // • 입력 2: TF (reference -> base_link, base_link -> os_sensor)
 //
-// • 출력 1: /steering_angle (std_msgs/Float32, [deg])
+// • 출력 1: /cmd/steering_angle (std_msgs/Float32, [deg])
 // • 출력 2: /lookahead_point_marker (visualization_msgs/Marker)
 // ──────────────────────────────────────────────────────────────
 
@@ -51,7 +51,7 @@ public:
     );
 
     // ===== 퍼블리셔 =====
-    steering_pub_ = this->create_publisher<std_msgs::msg::Float32>("/steering_angle", 10);
+    steering_pub_ = this->create_publisher<std_msgs::msg::Float32>("/cmd/steering_angle", 10);
     lookahead_marker_pub_ = this->create_publisher<visualization_msgs::msg::Marker>("/lookahead_point_marker", 10);
 
     // ===== 제어 타이머 =====
