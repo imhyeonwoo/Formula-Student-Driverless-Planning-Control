@@ -1,34 +1,35 @@
 simple_speed_planner:
   ros__parameters:
-    max_speed: 2.0          # 차량의 최대 목표 속도 [m/s]
-    max_accel: 2.0           # 최대 가속도 한계 [m/s^2]
-    max_decel: 2.0           # 최대 감속도 한계 [m/s^2]
-    max_lat_accel: 1.0       # 최대 횡가속도 한계 (코너링 시 안정성) [m/s^2]
-    resample_ds: 0.5        # 경로를 등간격으로 리샘플링할 간격 [m]
-    kappa_floor: 1.0e-4      # 곡률 계산 시 최소값(너무 작은 값 방지용)
-    smooth_window: 5         # 곡률 이동 평균 윈도우 크기 (홀수 권장)
-    start_speed_fallback: 0.0  # 현재 속도를 알 수 없을 때 시작 속도 [m/s]
+    # Topic 설정
+    path_topic: "/local_planned_path"
+    speed_topic: "/current_speed"
+    out_topic: "/desired_speed_profile"
 
-    cmd_lookahead_time: 0.3  # 현재 속도 기반 프리뷰 시간 [s]
-    cmd_lookahead_min: 0.5   # 프리뷰 거리 하한 [m]
-    cmd_lookahead_max: 3.0   # 프리뷰 거리 상한 [m]
-    cmd_accel_up: 1.5        # 단일 속도 명령의 최대 가속도 증가량 [m/s^2]
-    cmd_accel_down: 3.0      # 단일 속도 명령의 최대 감속도 증가량 [m/s^2]
-    cmd_jerk_max: 4.0        # 단일 속도 명령의 최대 저크(가속 변화량) [m/s^3]
 
-# ==============================
-# +-------------------------------+----------------------------------------------------------+
-# | 파라미터                      | 역할                                                     |
-# +-------------------------------+----------------------------------------------------------+
-# | max_speed                     | 속도 상한 설정. 곡률·가속 제약과 무관하게 넘어가지 않음. |
-# | max_accel / max_decel         | 경로상의 전·후방 속도 변화 허용치 설정. 거리 기반으로 가속·감속 제한. |
-# | max_lat_accel                 | 곡률에 따른 횡가속도 제한으로, 코너링 안정성을 위한 값.   |
-# | resample_ds                   | 경로를 등간격으로 리샘플링할 간격. 작은 값일수록 세밀하지만 계산량 증가. |
-# | kappa_floor                   | 곡률이 거의 0일 때 계산 안정성을 위한 최소 값.           |
-# | smooth_window                 | 곡률 계산 시 이동 평균을 적용해 노이즈 제거.             |
-# | start_speed_fallback          | 현재 속도를 못 받았을 때 시작 속도로 대체.               |
-# | cmd_lookahead_time            | 현재 속도 기반으로 몇 초 앞의 속도를 목표로 할지 결정.   |
-# | cmd_lookahead_min / max       | 프리뷰 거리의 최소·최대 한계값.                          |
-# | cmd_accel_up / cmd_accel_down | 단일 속도 명령의 최대 가속·감속 제한.                    |
-# | cmd_jerk_max                  | 가속 변화율(저크) 제한으로 부드러운 속도 변화를 보장.    |
-# +-------------------------------+----------------------------------------------------------+
+    # 계산 주기 및 호라이즌
+    recalc_rate_hz: 15.0 # 속도 프로파일 재계산 타이머(Hz)
+    horizon_m: -1.0 # 전체 경로 사용(-1). >0이면 해당 거리까지만 사용
+
+
+    # 속도/가속 제약
+    v_max: 4.0
+    v_min: 0.3
+    v_end: 0.0 # 마지막 웨이포인트 목표 속도(정지면 0.0)
+
+
+    a_acc: 2.0 # 최대 가속 (m/s^2)
+    a_brk: 2.5 # 최대 감속 (m/s^2)
+    ay_max: 1.5 # 최대 횡가속 (m/s^2) → 곡률 기반 속도 제한
+
+
+    # 곡률/스무딩 파라미터
+    kappa_ma_window: 5 # 곡률 이동평균 윈도우(포인트)
+    epsilon_kappa: 1.0e-6
+
+
+    # 현재속도 EMA 필터(100Hz 입력 저역통과)
+    ema_tau_speed: 0.2 # 초 단위 time constant
+
+
+    # 로깅
+    log_throttle_sec: 2.0
