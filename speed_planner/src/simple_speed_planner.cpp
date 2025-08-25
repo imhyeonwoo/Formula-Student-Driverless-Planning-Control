@@ -16,8 +16,7 @@ public:
     speed_topic_ = declare_parameter<std::string>("speed_topic", "/current_speed");
     out_topic_ = declare_parameter<std::string>("out_topic", "/desired_speed_profile");
     desired_speed_topic_ = declare_parameter<std::string>("desired_speed_topic", "/desired_speed");
-    desired_rpm_topic_ = declare_parameter<std::string>("desired_rpm_topic", "/desired_rpm");
-
+    
     recalc_rate_hz_ = declare_parameter<double>("recalc_rate_hz", 15.0);
     desired_pub_rate_hz_ = declare_parameter<double>("desired_pub_rate_hz", 50.0);
     horizon_m_ = declare_parameter<double>("horizon_m", -1.0);
