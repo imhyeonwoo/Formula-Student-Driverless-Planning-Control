@@ -18,6 +18,7 @@ WHEELBASE = 3.0
 MAX_STEERING = 45
 MAX_SPEED = 60
 CAR_POSITION = (0,0)
+SPEED = 10.0
 
 #---- Pure Pursuit Logic Params ----
 #LAD = 2.0              #고정 Look Ahead #ROS2 파라미터 설정으로 인한 주석처리
@@ -35,10 +36,12 @@ class PurePursuitControl(Node):
         ##### Params #####
         self.declare_parameter('LAD', 2.0)
         self.declare_parameter('WHEELBASE', 3.0)
+        self.declare_parameter('SPEED', 10.0)
 
         ##### Load Params #####
         self.LAD = self.get_parameter('LAD').value
         self.WHEELBASE = self.get_parameter('WHEELBASE').value
+        self.SPEED = self.get_parameter('SPEED').value
 
         ###### Subscriber ######
 
@@ -59,12 +62,11 @@ class PurePursuitControl(Node):
         ###### Publisher ######
         self.pub_speed = self.create_publisher(Float32MultiArray, '/desired_speed', 10)
         self.speed_msg = Float32MultiArray()
-       
         self.pub_str = self.create_publisher(Float32MultiArray, '/steering_angle', 10)
         self.str_msg = Float32MultiArray()
 
         #----- Visualize -----#
-        self.pub_lad = self.create_publisher(Marker, 'vis_lad', 1)
+        self.pub_lad = self.create_publisher(Marker, '/lookahead_point_marker', 1)
 
         #----- Initialize -----#
         self.path = []              # 경로
@@ -135,20 +137,22 @@ class PurePursuitControl(Node):
         steering = math.atan2(2.0 * self.WHEELBASE * math.sin(alpha), math.hypot(dx, dy))
         return steering
     
-    #----- 조향각 퍼블리시 -----#
-    def drive(self, steering):
+    #----- 조향각,속도 퍼블리시 -----#
+    def drive(self, steering, speed):
         self.str_msg.data = [float(steering)]
         self.pub_str.publish(self.str_msg)
 
-    ###### Visualize ######
+        # self.speed_msg.data = [float(speed)]
+        # self.pub_speed.publish(self.speed_msg)
 
+    ###### Visualize ######
     #----- Look Ahead Distance -----#
     def vis_lad(self, lad: float):
         if lad is None or lad <= 0:
             return
 
         marker = Marker()
-        marker.header.frame_id = 'os_sensor'
+        marker.header.frame_id = 'base_link'
         marker.header.stamp = self.get_clock().now().to_msg()
         marker.ns = 'lad_semicircle'
         marker.id = 1
@@ -182,8 +186,11 @@ class PurePursuitControl(Node):
         steering_angle = self.compute_steering(target)
         steering_angle = np.clip(steering_angle, math.radians(-MAX_STEERING), math.radians(MAX_STEERING))
 
-        #----- 조향각 퍼블리시 -----#
-        self.drive(steering_angle)
+        #----- 속도 (추후 값 지정) ----#
+        speed = self.SPEED
+
+        #----- 제어값 퍼블리시 -----#
+        self.drive(steering_angle, speed)
 
         #----- 시각화 -----#
         self.vis_lad(lad)
