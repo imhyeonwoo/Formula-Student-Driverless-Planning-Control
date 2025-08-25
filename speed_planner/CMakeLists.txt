@@ -10,6 +10,9 @@ find_package(std_msgs REQUIRED)
 find_package(nav_msgs REQUIRED)
 find_package(geometry_msgs REQUIRED)
 
+# [추가] Matplot++는 선택사항 (없으면 CSV만 출력)
+find_package(Matplot++ QUIET)
+
 include_directories(include)
 
 add_executable(simple_speed_planner src/simple_speed_planner.cpp)
@@ -20,9 +23,20 @@ add_executable(stcap_fb_speed_planner src/stcap_fb_speed_planner_node.cpp)
 ament_target_dependencies(stcap_fb_speed_planner 
   rclcpp std_msgs nav_msgs)
 
+# [추가] 디버그용 실행파일: 종료 시 CSV/PNG 저장
+add_executable(simple_speed_planner_debug src/simple_speed_planner_debug.cpp)
+ament_target_dependencies(simple_speed_planner_debug rclcpp std_msgs nav_msgs)
+
+# [추가] Matplot++ 발견 시 링크 + 플래그 정의
+if(Matplot++_FOUND)
+  target_link_libraries(simple_speed_planner_debug Matplot++::matplot)
+  target_compile_definitions(simple_speed_planner_debug PRIVATE HAVE_MATPLOT=1)
+endif()
+
 install(TARGETS
   simple_speed_planner
   stcap_fb_speed_planner
+  simple_speed_planner_debug   # [추가]
   DESTINATION lib/${PROJECT_NAME}
 )
 
