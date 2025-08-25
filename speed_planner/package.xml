@@ -1,0 +1,28 @@
+<?xml version="1.0"?>
+<package format="3">
+  <name>speed_planner</name>
+  <version>0.0.1</version>
+  <description>Local speed profile generator for path planning.</description>
+
+  <maintainer email="you@example.com">Your Name</maintainer>
+  <license>Apache-2.0</license>
+
+  <buildtool_depend>ament_cmake</buildtool_depend>
+
+  <build_depend>rclcpp</build_depend>
+  <build_depend>std_msgs</build_depend>
+  <build_depend>nav_msgs</build_depend>
+  <!-- Eigen CMake 모듈 (find_package(Eigen3) 용) -->
+  <build_depend>eigen3_cmake_module</build_depend>
+
+  <exec_depend>rclcpp</exec_depend>
+  <exec_depend>rclpy</exec_depend>
+  <exec_depend>std_msgs</exec_depend>
+  <exec_depend>nav_msgs</exec_depend>
+  <!-- rosdep 키 'eigen'은 시스템의 libeigen3-dev로 매핑 -->
+  <exec_depend>eigen</exec_depend>
+
+  <export>
+    <build_type>ament_cmake</build_type>
+  </export>
+</package>
