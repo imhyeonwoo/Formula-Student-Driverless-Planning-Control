@@ -7,6 +7,7 @@
 #include <cmath>
 #include <algorithm>
 #include <chrono>
+#include <string>
 
 class SimpleSpeedPlanner : public rclcpp::Node {
 public:
@@ -16,7 +17,12 @@ public:
     speed_topic_ = declare_parameter<std::string>("speed_topic", "/current_speed");
     out_topic_ = declare_parameter<std::string>("out_topic", "/desired_speed_profile");
     desired_speed_topic_ = declare_parameter<std::string>("desired_speed_topic", "/desired_speed");
-    
+
+    // [ADD] RPM 관련 파라미터
+    desired_rpm_topic_ = declare_parameter<std::string>("desired_rpm_topic", "/desired_rpm");
+    wheel_diameter_m_ = declare_parameter<double>("wheel_diameter_m", 0.47);       // 47 cm
+    gear_ratio_motor_to_wheel_ = declare_parameter<double>("gear_ratio", 4.6);     // 모터:바퀴
+
     recalc_rate_hz_ = declare_parameter<double>("recalc_rate_hz", 15.0);
     desired_pub_rate_hz_ = declare_parameter<double>("desired_pub_rate_hz", 50.0);
     horizon_m_ = declare_parameter<double>("horizon_m", -1.0);
@@ -42,9 +48,15 @@ public:
 
     log_throttle_sec_ = declare_parameter<double>("log_throttle_sec", 2.0);
 
+    // [ADD] m/s → rpm 변환 계수(모터)
+    static constexpr double kPi = 3.14159265358979323846;
+    motor_rpm_per_mps_ = (60.0 * gear_ratio_motor_to_wheel_) / (kPi * wheel_diameter_m_);
+
     // Pub/Sub
     pub_profile_ = create_publisher<std_msgs::msg::Float32MultiArray>(out_topic_, 10);
     pub_desired_ = create_publisher<std_msgs::msg::Float32>(desired_speed_topic_, 10);
+    // [ADD] /desired_rpm 퍼블리셔
+    pub_desired_rpm_ = create_publisher<std_msgs::msg::Float32>(desired_rpm_topic_, 10);
 
     sub_path_ = create_subscription<nav_msgs::msg::Path>(
         path_topic_, rclcpp::QoS(10),
@@ -64,8 +76,10 @@ public:
     timer_cmd_ = create_wall_timer(duration_cast<milliseconds>(t_cmd),
                                std::bind(&SimpleSpeedPlanner::onCmdTimer, this));
 
-    RCLCPP_INFO(get_logger(), "SimpleSpeedPlanner started. path='%s' speed='%s' → out='%s', desired='%s'",
-                path_topic_.c_str(), speed_topic_.c_str(), out_topic_.c_str(), desired_speed_topic_.c_str());
+    RCLCPP_INFO(get_logger(),
+      "SimpleSpeedPlanner started. path='%s' speed='%s' → out='%s', desired='%s', desired_rpm='%s' (%.2f rpm per m/s)",
+      path_topic_.c_str(), speed_topic_.c_str(), out_topic_.c_str(),
+      desired_speed_topic_.c_str(), desired_rpm_topic_.c_str(), motor_rpm_per_mps_);
   }
 
 private:
@@ -252,9 +266,15 @@ private:
     v_cmd = clip(v_cmd, v_min_, v_max_);
     v_cmd_prev_ = v_cmd;
 
-    std_msgs::msg::Float32 msg;
-    msg.data = static_cast<float>(v_cmd);
-    pub_desired_->publish(msg);
+    // Publish desired speed (m/s)
+    std_msgs::msg::Float32 msg_speed;
+    msg_speed.data = static_cast<float>(v_cmd);
+    pub_desired_->publish(msg_speed);
+
+    // [ADD] v_cmd(m/s) → 모터 RPM으로 변환하여 퍼블리시
+    std_msgs::msg::Float32 msg_rpm;
+    msg_rpm.data = static_cast<float>(v_cmd * motor_rpm_per_mps_);
+    pub_desired_rpm_->publish(msg_rpm);
   }
 
   inline double clip(double x, double lo, double hi) const {
@@ -265,6 +285,12 @@ private:
 
   // Parameters
   std::string path_topic_, speed_topic_, out_topic_, desired_speed_topic_;
+  // [ADD]
+  std::string desired_rpm_topic_;
+  double wheel_diameter_m_{};
+  double gear_ratio_motor_to_wheel_{};
+  double motor_rpm_per_mps_{};  // m/s → rpm 변환 계수(모터)
+
   double recalc_rate_hz_{};
   double desired_pub_rate_hz_{};
   double horizon_m_{};
@@ -282,6 +308,9 @@ private:
   rclcpp::Subscription<std_msgs::msg::Float32>::SharedPtr sub_speed_;
   rclcpp::Publisher<std_msgs::msg::Float32MultiArray>::SharedPtr pub_profile_;
   rclcpp::Publisher<std_msgs::msg::Float32>::SharedPtr pub_desired_;
+  // [ADD]
+  rclcpp::Publisher<std_msgs::msg::Float32>::SharedPtr pub_desired_rpm_;
+
   rclcpp::TimerBase::SharedPtr timer_recalc_;
   rclcpp::TimerBase::SharedPtr timer_cmd_;
 
