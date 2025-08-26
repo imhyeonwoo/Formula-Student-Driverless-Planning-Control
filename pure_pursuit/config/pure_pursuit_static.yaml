@@ -1,0 +1,24 @@
+pure_pursuit_static:
+  ros__parameters:
+    # Topics
+    path_topic: "/local_planned_path"                 # nav_msgs/Path (frame_id=base_link)
+    steer_topic: "/cmd/steer"                         # std_msgs/Float32 (deg, 좌회전 +)
+    lookahead_marker_topic: "/lookahead_point_marker" # visualization_msgs/Marker
+
+    # Vehicle
+    wheelbase_m: 1.295
+
+    # Static Look-Ahead Distance
+    lookahead_m: 2.5
+
+    # Limits / behavior
+    publish_rate_hz: 50.0
+    steer_limit_deg: 30.0       # 조향 한계 [deg] (예: 30도)
+    use_x_forward_only: true     # x>0인 점만 룩어헤드 후보로 사용
+
+    # Marker (mint color)
+    marker_scale: 0.50
+    marker_alpha: 1.0
+    marker_r: 0.00
+    marker_g: 1.00
+    marker_b: 0.80
