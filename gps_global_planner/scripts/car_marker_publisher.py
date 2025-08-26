@@ -120,7 +120,7 @@ class CarMarkerPublisher(Node):
 
         # 화살표/텍스트
         self.declare_parameter('show_steer_arrow', True)
-        self.declare_parameter('arrow_length', 1.0)        # [m]
+        self.declare_parameter('arrow_length', 4.0)        # [m]
         self.declare_parameter('arrow_thickness', 0.08)    # [m]
         self.declare_parameter('arrow_height', 0.07)       # [m] 바퀴/전륜 중앙 위로 띄우기
 

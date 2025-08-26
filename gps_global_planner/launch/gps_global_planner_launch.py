@@ -38,9 +38,9 @@ def generate_launch_description():
     antenna_offset_z = LaunchConfiguration('antenna_offset_z')
 
     # LiDAR 위치(base_link -> os_sensor)
-    sen_x_arg = DeclareLaunchArgument('sensor_offset_x', default_value='0.0')
+    sen_x_arg = DeclareLaunchArgument('sensor_offset_x', default_value='0.5')
     sen_y_arg = DeclareLaunchArgument('sensor_offset_y', default_value='0.0')
-    sen_z_arg = DeclareLaunchArgument('sensor_offset_z', default_value='1.8')
+    sen_z_arg = DeclareLaunchArgument('sensor_offset_z', default_value='0.91')
     sensor_offset_x = LaunchConfiguration('sensor_offset_x')
     sensor_offset_y = LaunchConfiguration('sensor_offset_y')
     sensor_offset_z = LaunchConfiguration('sensor_offset_z')
