@@ -60,7 +60,7 @@ class CarMarkerPublisher(Node):
 
         # ===== 바퀴(실린더) 크기 (m) =====
         self.declare_parameter('wheel_radius', 0.235)
-        self.declare_parameter('wheel_width',  0.20)
+        self.declare_parameter('wheel_width',  0.19)
         self.wheel_radius: float = float(self.get_parameter('wheel_radius').value)
         self.wheel_width:  float = float(self.get_parameter('wheel_width').value)
 
@@ -120,8 +120,8 @@ class CarMarkerPublisher(Node):
 
         # 화살표/텍스트
         self.declare_parameter('show_steer_arrow', True)
-        self.declare_parameter('arrow_length', 0.7)        # [m]
-        self.declare_parameter('arrow_thickness', 0.06)    # [m]
+        self.declare_parameter('arrow_length', 1.0)        # [m]
+        self.declare_parameter('arrow_thickness', 0.08)    # [m]
         self.declare_parameter('arrow_height', 0.07)       # [m] 바퀴/전륜 중앙 위로 띄우기
 
         self.declare_parameter('show_steer_text', True)
