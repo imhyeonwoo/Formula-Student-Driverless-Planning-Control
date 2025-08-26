@@ -105,7 +105,7 @@ class CarMarkerPublisher(Node):
 
         # ===== 조향 토픽/필터/제한 =====
         # 입력: deg, 좌회전 + / 우회전 −
-        self.declare_parameter('steer_topic', '/cmd/steer')
+        self.declare_parameter('steer_topic', '/cmd/steer') # 추후 제어에서 넘겨주는 실제 조향각 토픽(/ctrl/steer)으로 변환하기
         self.declare_parameter('steer_limit_deg', 28.0)   # 시각화용 제한(도)
         self.declare_parameter('steer_ema_tau', 0.10)     # [s] 시각화 필터(EMA)
         steer_topic = self.get_parameter('steer_topic').get_parameter_value().string_value
@@ -331,7 +331,7 @@ class CarMarkerPublisher(Node):
         m.action = Marker.ADD
 
         m.scale.x = self.front_link_width  # LINE_STRIP 두께
-        m.color.r, m.color.g, m.color.b, m.color.a = 0.0, 0.9, 1.0, 1.0  # 시안색
+        m.color.r, m.color.g, m.color.b, m.color.a = 1.0, 0.0, 1.0, 1.0  # 시안색
 
         from geometry_msgs.msg import Point
         if not self.front_link_follow_steer:
