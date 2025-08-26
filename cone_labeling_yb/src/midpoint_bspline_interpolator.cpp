@@ -1,41 +1,37 @@
+// src/midpoint_bspline_to_path.cpp
 #include <rclcpp/rclcpp.hpp>
 #include <visualization_msgs/msg/marker_array.hpp>
-#include <visualization_msgs/msg/marker.hpp>
+#include <nav_msgs/msg/path.hpp>
+#include <geometry_msgs/msg/pose_stamped.hpp>
 #include <geometry_msgs/msg/point.hpp>
 #include <vector>
 #include <algorithm>
 #include <cmath>
 
-using visualization_msgs::msg::Marker;
 using visualization_msgs::msg::MarkerArray;
+using visualization_msgs::msg::Marker;
 using geometry_msgs::msg::Point;
+using nav_msgs::msg::Path;
+using geometry_msgs::msg::PoseStamped;
 
-class MidpointBSplineInterpolator : public rclcpp::Node {
+class MidpointBSplineToPath : public rclcpp::Node {
 public:
-  MidpointBSplineInterpolator()
-  : Node("midpoint_bspline_interpolator")
+  MidpointBSplineToPath()
+  : Node("midpoint_bspline_to_path")
   {
     sub_ = create_subscription<MarkerArray>(
       "/cone_delaunay_midpoints",
       rclcpp::SystemDefaultsQoS(),
-      std::bind(&MidpointBSplineInterpolator::callback, this, std::placeholders::_1)
+      std::bind(&MidpointBSplineToPath::callback, this, std::placeholders::_1)
     );
-    pub_ = create_publisher<MarkerArray>("/midpoint_bspline_points", 10);
-    RCLCPP_INFO(get_logger(), "MidpointBSplineInterpolator started");
+    // B-spline 점들을 Path로 퍼블리시 (속도 플래너가 구독)
+    path_pub_ = create_publisher<Path>("/local_planned_path", 10);
+    RCLCPP_INFO(get_logger(), "MidpointBSplineToPath started");
   }
 
 private:
   void callback(const MarkerArray::SharedPtr msg) {
     if (msg->markers.empty()) return;
-
-    // 0) 이전 마커 전부 삭제
-    Marker clear;
-    clear.header.stamp    = now();
-    clear.header.frame_id = msg->markers.front().header.frame_id;
-    clear.action          = Marker::DELETEALL;
-    MarkerArray clear_arr;
-    clear_arr.markers.push_back(clear);
-    pub_->publish(clear_arr);
 
     // 1) 중점들 수집 (ADD 액션만)
     std::vector<Point> pts;
@@ -45,8 +41,7 @@ private:
     }
     if (pts.size() < 4) {
       RCLCPP_WARN(get_logger(),
-                  "Need at least 4 points for B-spline (got %zu)",
-                  pts.size());
+                  "Need at least 4 points for B-spline (got %zu)", pts.size());
       return;
     }
 
@@ -124,26 +119,26 @@ private:
       prev = cur;
     }
 
-    // 7) 샘플 포인트 퍼블리시
-    MarkerArray out;
-    int id = 0;
-    for (auto &p : samples) {
-      Marker m;
-      m.header.stamp    = now();
-      m.header.frame_id = clear.header.frame_id;
-      m.ns              = "midpoint_bspline";
-      m.id              = id++;
-      m.type            = Marker::SPHERE;
-      m.action          = Marker::ADD;
-      m.pose.position   = p;
-      m.scale.x = m.scale.y = m.scale.z = 0.3f;
-      m.color.r = 1.0f; m.color.g = 1.0f; m.color.b = 1.0f; m.color.a = 1.0f;
-      out.markers.push_back(m);
+    // 7) Path 메시지로 퍼블리시
+    Path path_msg;
+    path_msg.header.stamp    = now();
+    path_msg.header.frame_id = msg->markers.front().header.frame_id;
+
+    for (const auto &p : samples) {
+      PoseStamped ps;
+      ps.header = path_msg.header;
+      ps.pose.position = p;
+      // 방향은 정의되지 않으므로 단위 쿼터니언으로 설정
+      ps.pose.orientation.x = 0.0;
+      ps.pose.orientation.y = 0.0;
+      ps.pose.orientation.z = 0.0;
+      ps.pose.orientation.w = 1.0;
+      path_msg.poses.push_back(ps);
     }
-    pub_->publish(out);
+    path_pub_->publish(path_msg);
   }
 
-  // knot 벡터에서 span 찾기
+  // knot 벡터에서 span 찾기 (원본과 동일)
   int findSpan(int n, int p, double u,
                const std::vector<double> &U)
   {
@@ -159,12 +154,12 @@ private:
   }
 
   rclcpp::Subscription<MarkerArray>::SharedPtr sub_;
-  rclcpp::Publisher<MarkerArray>::SharedPtr      pub_;
+  rclcpp::Publisher<Path>::SharedPtr           path_pub_;
 };
 
 int main(int argc, char **argv) {
   rclcpp::init(argc, argv);
-  rclcpp::spin(std::make_shared<MidpointBSplineInterpolator>());
+  rclcpp::spin(std::make_shared<MidpointBSplineToPath>());
   rclcpp::shutdown();
   return 0;
 }
