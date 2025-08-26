@@ -1,0 +1,38 @@
+pure_pursuit_dynamic:
+  ros__parameters:
+    # Topics
+    path_topic: "/local_planned_path"                  # nav_msgs/Path (frame_id=base_link)
+    speed_topic: "/current_speed"                      # std_msgs/Float32 (m/s)
+    steer_topic: "/cmd/steer"                          # std_msgs/Float32 (deg, 좌회전 +)
+    lookahead_marker_topic: "/lookahead_point_marker"  # visualization_msgs/Marker
+
+    # Vehicle
+    wheelbase_m: 1.295
+
+    # Dynamic Look-Ahead Distance Ld(v, κ)
+    L0: 1.5            # [m] 기본 오프셋
+    k_v: 0.6           # [s]  Ld = L0 + k_v * v  (v[m/s] * s = m)
+    Ld_min: 2.0        # [m]
+    Ld_max: 5.0        # [m]
+
+    # (옵션) 곡률 보정: Ld += k_k / (|κ|+ε)
+    use_curvature_term: false
+    k_k: 0.0           # [m·unitless] 0이면 미사용
+    epsilon_kappa: 1.0e-6
+    curv_window_m: 2.0 # [m] 경로 시작부에서 이 거리 근방의 κ 평가
+
+    # Behavior
+    publish_rate_hz: 50.0
+    steer_limit_deg: 30.0       # [deg] ±한계
+    use_x_forward_only: true    # x>0 전방점만 후보
+
+    # Smoothing
+    ema_tau_speed: 0.2          # [s] 속도 EMA
+    ema_tau_cmd: 0.1            # [s] 스티어(deg) EMA
+
+    # Marker (mint color)
+    marker_scale: 0.30
+    marker_alpha: 1.0
+    marker_r: 0.00
+    marker_g: 1.00
+    marker_b: 0.80

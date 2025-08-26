@@ -17,7 +17,14 @@ ament_target_dependencies(pure_pursuit_static
   rclcpp std_msgs nav_msgs visualization_msgs
 )
 
-install(TARGETS pure_pursuit_static
+add_executable(pure_pursuit_dynamic src/pure_pursuit_dynamic.cpp)
+ament_target_dependencies(pure_pursuit_dynamic
+  rclcpp std_msgs nav_msgs visualization_msgs
+)
+
+install(TARGETS 
+  pure_pursuit_static
+  pure_pursuit_dynamic
   DESTINATION lib/${PROJECT_NAME})
 
 install(DIRECTORY config
