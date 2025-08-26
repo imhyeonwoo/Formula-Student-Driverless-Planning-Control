@@ -51,7 +51,7 @@ public:
     );
 
     // ===== 퍼블리셔 =====
-    steering_pub_ = this->create_publisher<std_msgs::msg::Float32>("/cmd/steering_angle", 10);
+    steering_pub_ = this->create_publisher<std_msgs::msg::Float32>("/cmd/steer", 10);
     lookahead_marker_pub_ = this->create_publisher<visualization_msgs::msg::Marker>("/lookahead_point_marker", 10);
 
     // ===== 제어 타이머 =====

@@ -1,5 +1,5 @@
 purepursuit_control:
   ros__parameters:
-    LAD: 2.0
+    LAD: 2.5
     WHEELBASE: 1.3
-    SPEED: 5.0
+    SPEED: 10.0

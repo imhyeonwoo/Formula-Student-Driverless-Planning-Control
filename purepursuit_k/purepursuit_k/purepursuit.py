@@ -62,7 +62,7 @@ class PurePursuitControl(Node):
         ###### Publisher ######
         self.pub_speed = self.create_publisher(Float32MultiArray, '/desired_speed', 10)
         self.speed_msg = Float32MultiArray()
-        self.pub_str = self.create_publisher(Float32MultiArray, '/cmd/steering_angle', 10)
+        self.pub_str = self.create_publisher(Float32MultiArray, '/steering_angle', 10)
         self.str_msg = Float32MultiArray()
 
         #----- Visualize -----#
