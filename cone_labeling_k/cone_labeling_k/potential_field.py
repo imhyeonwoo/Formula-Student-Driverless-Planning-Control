@@ -26,6 +26,7 @@ from std_msgs.msg import ColorRGBA, UInt8
 import numpy as np
 from collections import deque
 from scipy.interpolate import splprep, splev
+from tf2_ros import Buffer, TransformListener
 
 from rclpy.qos import QoSProfile, ReliabilityPolicy
 qos = QoSProfile(depth=10)
@@ -49,6 +50,7 @@ CAR_X, CAR_Y = 0,0
 #----- Path -----#
 DIST_THRESH = 2.0       #유효값 산출을 위한 좌표간 최대 거리 제한
 FRAME_BUFFER = 3        #연산 대상 프레임 누적 개수
+PATH_INTERVAL = 0.5     #등간격 리샘플링 간격
 
 #----- AEB -----#
 AEB_TRHESH = 7
@@ -212,6 +214,40 @@ class PotentialFieldLabeler(Node):
         except ValueError:
             return path
         
+    #----- 경로 등간격 리샘플링 -----#
+    def resampling(self, path, ds=PATH_INTERVAL, include_endpoint=True):
+        if not path or len(path) < 2:
+            return path
+        
+        pts = np.asarray(path, dtype=float)
+        seg = pts[1:] - pts[:-1]
+        seg_len = np.linalg.norm(seg, axis=1)
+        total_len = np.sum(seg_len)
+        if total_len < 1e-6:
+            return [tuple(pts[0])]
+        
+        cum = np.zeros(len(pts))
+        cum[1:] = np.cumsum(seg_len)
+        if include_endpoint:
+            num = int(np.floor(total_len / ds))
+            s_samples = np.linspace(0.0, total_len, num + 1)
+        else:
+            num = int(np.floor(total_len / ds)) + 1
+            s_samples = np.arange(0.0, min(total_len, ds * num) - 1e-9, ds)
+        x = pts[:, 0]
+        y = pts[:, 1]
+        xs = np.interp(s_samples, cum, x)
+        ys = np.interp(s_samples, cum, y)
+        out = []
+        last = None
+        for xi, yi in zip(xs, ys):
+            if last is None or np.hypot(xi - last[0], yi - last[1]) >= 1e-6:
+                out.append((float(xi), float(yi)))
+                last = (xi, yi)
+        if include_endpoint and np.hypot(out[-1][0] - pts[-1, 0], out[-1][1] - pts[-1, 1]) > 1e-6:
+            out.append((float(pts[-1, 0]), float(pts[-1, 1])))
+        return out
+            
     #----- 좌,우 라벨링 -----#
     def cone_sort(self, cones: list[tuple], path: list[tuple]):
         if len(cones) == 0 or len(path) < 2:
@@ -246,6 +282,7 @@ class PotentialFieldLabeler(Node):
 
         return left_cones, right_cones
     
+    #----- 긴급제동 판단 -----#
     def determine_aeb(self, cone):
         n_red = 0
         for x, y, z in cone:
@@ -350,8 +387,8 @@ class PotentialFieldLabeler(Node):
 
         self.valid_trough_pub.publish(marker)
 
-    #----- Splined 경로 시각화 -----#
-    def vis_SplinedPath(self, points: list[tuple]):
+    #----- Resampled 경로 시각화 -----#
+    def vis_ResampledPath(self, points: list[tuple]):
         if not points:
             return
         
@@ -372,6 +409,7 @@ class PotentialFieldLabeler(Node):
             path_msg.poses.append(pose)
         
         self.pub_splined_path.publish(path_msg)
+
 
     #----- Left Cone -----#
     def vis_leftcone(self, cones: list[tuple]):
@@ -463,8 +501,9 @@ class PotentialFieldLabeler(Node):
         3. Field 영역 내 Trough(골) Point 탐색
         4. 근거리 기반 유효 좌표 필터링
         5. 스플라이닝 진행
-        6. 법선 기반 좌우측 콘 Labeling
-        7. 퍼블리시
+        6. 등간격 리샘플링 진행
+        7. 법선 기반 좌우측 콘 Labeling
+        8. 퍼블리시
         '''
         #데이터 오류 예외처리
         if len(self.cone_data) < 3:
@@ -483,6 +522,9 @@ class PotentialFieldLabeler(Node):
         #----- Splining -----#
         SplinedPath = self.splining(ValidPath)
 
+        #----- Resampling -----#
+        ResampledPath = self.resampling(SplinedPath)
+
         #----- Cone Sorting -----#
         left_cones, right_cones = self.cone_sort(self.frame_buffer[-1], SplinedPath)
 
@@ -491,7 +533,7 @@ class PotentialFieldLabeler(Node):
 
         #----- Labeled Cone Publish -----#
         labeled_msg = ModifiedFloat32MultiArray()
-        labeled_msg.header.frame_id = "os_sensor"
+        labeled_msg.header.frame_id = "base_link"
         labeled_msg.header.stamp = self.get_clock().now().to_msg()
 
         labeled_msg.data = []
@@ -512,7 +554,7 @@ class PotentialFieldLabeler(Node):
         self.vis_TroughPoints(TroughPoints)
         self.vis_CarPosition()
         self.vis_ValidPoints(ValidPath)
-        self.vis_SplinedPath(SplinedPath)
+        self.vis_ResampledPath(ResampledPath) #시각화와 경로 토픽 동시 퍼블리시
         self.vis_leftcone(left_cones)
         self.vis_rightcone(right_cones)
         self.vis_RedCone()
