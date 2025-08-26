@@ -9,7 +9,7 @@ public:
   GPSSpeedNode() : Node("gps_speed_node_float")
   {
     in_topic_   = this->declare_parameter<std::string>("in_topic", "local_xy");
-    out_topic_  = this->declare_parameter<std::string>("out_topic", "current_speed");
+    out_topic_  = this->declare_parameter<std::string>("out_topic", "current_speed/gps_only");
     alpha_      = this->declare_parameter<double>("ema_alpha", 0.3);   // 0~1
     max_speed_  = this->declare_parameter<double>("max_speed", 60.0);  // m/s (필요에 맞게 조정)
     min_dt_     = this->declare_parameter<double>("min_dt", 0.02);     // s
