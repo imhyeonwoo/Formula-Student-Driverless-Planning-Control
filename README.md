@@ -65,7 +65,7 @@ Planning/
 | Package | Main Functions | Language |
 |--------|-----------|------|
 | **cones_no_color** | • Generates an optimal reference path from cone locations<br>• Provides RViz visualization nodes | Python |
-| **gps_global_planner** | • Converts RTK-GPS logs to CSV and nav_msgs/Path<br>• ENU ↔️ Local Cartesian conversion<br>• Colors the global path by state and speed | C++, Python |
+| **gps_global_planner** | • Converts RTK-GPS logs to CSV and nav_msgs/Path<br>• ENU ↔ Local Cartesian conversion<br>• Colors the global path by state and speed | C++, Python |
 | **reference_path_classifier** | • Classifies cones on the left and right sides relative to the vehicle | Python |
 
 ---
@@ -80,8 +80,8 @@ cd [workspace path]
 colcon build --symlink-install --cmake-args -DCMAKE_BUILD_TYPE=Release
 source install/setup.bash
 ```
-- Use --symlink-install for immediate reflection of source code changes in the install directory.
-- Use -DCMAKE_BUILD_TYPE=Release for optimized execution performance.
+- Use `--symlink-install` for immediate reflection of source code changes in the install directory.
+- Use `-DCMAKE_BUILD_TYPE=Release` for optimized execution performance.
 
 ### Example Execution
 
@@ -89,11 +89,11 @@ source install/setup.bash
 # 1) Generate and publish the GPS-based global path
 ros2 launch gps_global_planner gps_global_planner_launch.py
 
-# 2) Generate a local path based on detected cones
-ros2 run cones_no_color reference_path_planning.py
+# 2) Classify left-right cones using Global Planned Path
+ros2 launch reference_path_classifier classify_cones_by_side.launch.py
 
-# 3) Check the result of cone left-right classification
-ros2 run reference_path_classifier classify_cones_by_side.py
+# 3) Generate a local path based on detected cones
+ros2 run cones_no_color reference_path_planning.py
 ```
 
 ### Demo Video
@@ -106,7 +106,7 @@ ros2 run reference_path_classifier classify_cones_by_side.py
     </td>
     <td align="center">
       <img src="docs/images/2globalcones_and_roi.gif" width="45%"/><br>
-      <b>2. Global Cones and ROI</b>
+      <b>2. Global Cones and ROI(Sim)</b>
     </td>
   </tr>
   <tr>
@@ -131,12 +131,12 @@ ros2 run reference_path_classifier classify_cones_by_side.py
   </tr>
   <tr>
     <td align="center">
-      <img src="docs/images/MPC/1Local%20Path.gif" width="45%"/><br>
+      <img src="docs/images/7local_speed_planning.gif" width="45%"/><br>
       <b>7. Local Speed Planning</b>
     </td>
     <td align="center">
-      <img src="docs/images/MPC/2MPC%20Path.gif" width="45%"/><br>
-      <b>8. Time Resampled Path for MPC</b>
+      <img src="docs/images/8pure_pursuit.gif" width="45%"/><br>
+      <b>8. Path Tracking(Pure Pursuit)</b>
     </td>
   </tr>
 </table>

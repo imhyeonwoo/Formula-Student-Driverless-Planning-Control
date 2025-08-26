@@ -22,7 +22,7 @@ class CarMarkerPublisher(Node):
         # ===== 차체/섀시 치수 (m) =====
         self.declare_parameter('body_length', 2.6)   # 범퍼~범퍼
         self.declare_parameter('body_width',  1.2)
-        self.declare_parameter('body_height', 1.28)
+        self.declare_parameter('body_height', 0.9)
         self.body_length: float = float(self.get_parameter('body_length').value)
         self.body_width:  float = float(self.get_parameter('body_width').value)
         self.body_height: float = float(self.get_parameter('body_height').value)
