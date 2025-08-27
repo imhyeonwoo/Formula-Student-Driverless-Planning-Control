@@ -5,7 +5,7 @@ pure_pursuit_adaptive:
     speed_topic: "/current_speed"
     # GPS-IMU Fusion으로 구한 속도 : /current_speed/odom
     # 하드웨어 제어에서 발행하는 모터 속도 : /current_speed/motor
-    steer_topic: "/cmd/steer_adptive"
+    steer_topic: "/cmd/steer"
     debug_marker_topic: "/pure_pursuit/debug_markers"
     base_frame: "base_link"
 
