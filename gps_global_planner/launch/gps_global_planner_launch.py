@@ -92,6 +92,21 @@ def generate_launch_description():
         }]
     )
 
+    car_marker = Node(
+        package='gps_global_planner',
+        executable='car_marker_publisher.py',   # ← 설치된 파일명과 일치해야 함
+        name='car_marker_publisher',
+        output='screen',
+        parameters=[{
+            # 예) 필요하면 아래 주석을 풀고 원하는 값으로 조정
+            # 'frame_id': 'base_link',
+            # 'wheel_base': 1.30,
+            # 'track_width': 1.20,
+            # 'steer_topic': '/cmd/steer',
+            # 'use_ackermann_visual': False,
+        }]
+    )
+
     return LaunchDescription([
         # 기본 파라미터 인자
         ref_lat_arg, ref_lon_arg,
@@ -107,5 +122,6 @@ def generate_launch_description():
         # 노드들
         gps_to_local,
         path_marker,
-        tf_broadcaster
+        tf_broadcaster,
+        car_marker,
     ])
