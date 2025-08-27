@@ -479,7 +479,7 @@ class PotentialFieldLabeler(Node):
                 y_raw = self.grid_y[i]
                 z = float(field[i, j])
                 p = Point(x=float(x_raw), y=float(y_raw), z=z)
-                c = ColorRGBA(r=norm[i, j], g=0.0, b=1.0 - norm[i, j], a=0.8)
+                c = ColorRGBA(r=norm[i, j], g=0.0, b=1.0 - norm[i, j], a=0.4)
                 marker.points.append(p)
                 marker.colors.append(c)
         self.field_pub.publish(marker)
