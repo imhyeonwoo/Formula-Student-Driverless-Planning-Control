@@ -146,7 +146,7 @@ ros2 run cones_no_color reference_path_planning.py
 ### Several Attempts for Better Planning and Tracking
 
 <p align="center">
-  <img src="docs/images/9adaptive pure pursuit.gif" width="40%"/><br>
+  <img src="docs/images/9adaptive pure pursuit.gif" width="60%"/><br>
   <b>Adaptive Pure Pursuit</b>
 </p>
 
