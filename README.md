@@ -141,6 +141,33 @@ ros2 run cones_no_color reference_path_planning.py
   </tr>
 </table>
 
+---
+
+### Several Attempts for Better Planning and Tracking
+
+<p align="center">
+  <img src="docs/images/9adaptive pure pursuit.gif" width="40%"/><br>
+  <b>Adaptive Pure Pursuit</b>
+</p>
+
+<p>
+  This GIF visualizes the <b>Adaptive Pure Pursuit algorithm</b>, based on the paper 
+  <i>“Accurate Path Tracking by Adjusting Look-Ahead Point”</i>. The <b>look-ahead distance</b> dynamically 
+  adjusts depending on vehicle speed and path curvature, enabling more accurate and stable path tracking 
+  compared to standard Pure Pursuit.
+</p>
+
+<ul>
+  <li><b>Mint Marker:</b> Look-ahead point of standard Pure Pursuit</li>
+  <li><b>Pink Marker:</b> Look-ahead point of Adaptive Pure Pursuit</li>
+</ul>
+
+<p>
+  In curves, the look-ahead distance is reduced to minimize path deviation, while on straights it is increased 
+  for smoother tracking, improving trajectory stability under diverse driving conditions.
+</p>
+
+
 
 ---
 
