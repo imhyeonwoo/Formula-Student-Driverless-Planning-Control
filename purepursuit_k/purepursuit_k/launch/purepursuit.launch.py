@@ -13,7 +13,7 @@ def generate_launch_description():
             executable='purepursuit',
             name='Pure_Pursuit_Node',
             output='screen',
-            parameters=[{'LAD': 2.0, 'WHEELBASE': 3.0}],
+            parameters=[{'LAD': 3.0, 'WHEELBASE': 1.3}],
             remappings=[('/local_planned_path', '/local_planned_path')]
         )
     ])
