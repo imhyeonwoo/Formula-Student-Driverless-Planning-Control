@@ -58,6 +58,7 @@ install(PROGRAMS
   scripts/global_yaw_estimator_node.py
   scripts/publish_global_cones.py
   scripts/car_marker_publisher.py
+  scripts/hud_overlay_node.py
   DESTINATION lib/${PROJECT_NAME})
 
 # ──────────────── 런치 / 데이터 ────────────────
