@@ -162,7 +162,7 @@ ros2 run cones_no_color reference_path_planning.py
 </p>
 
 <ul>
-  <li><b>Mint Marker:</b> Look-ahead point of standard Pure Pursuit</li>
+  <li><b>Mint Marker:</b> Look-ahead point of Standard Pure Pursuit</li>
   <li><b>Pink Marker:</b> Look-ahead point of Adaptive Pure Pursuit</li>
 </ul>
 
