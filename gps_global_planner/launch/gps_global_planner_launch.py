@@ -75,14 +75,14 @@ def generate_launch_description():
     )
 
     # Static transform: map -> odom (identity transform)
-    Node(
+    map_to_odom = Node(
         package='tf2_ros',
         executable='static_transform_publisher',
         name='map_to_odom_tf',
         output='screen',
         arguments=['0', '0', '0', '0', '0', '0', 'map', 'odom'],
-        parameters=[{'use_sim_time': LaunchConfiguration('use_sim_time')}]
-    ),
+        parameters=[{}]
+    )
 
     tf_broadcaster = Node(
         package='gps_global_planner',
@@ -134,4 +134,5 @@ def generate_launch_description():
         path_marker,
         tf_broadcaster,
         car_marker,
+        map_to_odom
     ])
