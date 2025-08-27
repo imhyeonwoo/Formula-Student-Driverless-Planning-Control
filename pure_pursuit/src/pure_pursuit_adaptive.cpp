@@ -558,7 +558,7 @@ private:
   std::string path_topic_, speed_topic_, steer_topic_, debug_topic_, base_frame_;
   std::string frame_id_from_path_{};
 
-  double wheelbase_m_{1.295};
+  double wheelbase_m_{1.3};
 
   bool   use_speed_term_{true};
   double L0_{1.5}, k_v_{0.6};

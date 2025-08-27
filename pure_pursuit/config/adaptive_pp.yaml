@@ -3,16 +3,18 @@ pure_pursuit_adaptive:
     # I/O
     path_topic: "/local_planned_path"
     speed_topic: "/current_speed"
+    # GPS-IMU Fusion으로 구한 속도 : /current_speed/odom
+    # 하드웨어 제어에서 발행하는 모터 속도 : /current_speed/motor
     steer_topic: "/cmd/steer_adptive"
     debug_marker_topic: "/pure_pursuit/debug_markers"
     base_frame: "base_link"
 
     # Vehicle
-    wheelbase_m: 1.295
+    wheelbase_m: 1.3
 
     # LAD scheduling
     use_speed_term: true
-    L0: 1.5
+    L0: 2.5
     k_v: 0.6
     use_curvature_term: true
     k_curv: 0.0

@@ -49,9 +49,13 @@ Planning/
 │   └── src/
 │       └── classify_cones_by_side.cpp
 │
-├── speed_planning/ # Calculates Desired Speed for Each Waypoints based on Curvature of the Path
+├── speed_planner/ # Calculates Desired Speed for Each Waypoints based on Curvature of the Path
+│   ├── launch/
+│   │   └── simple_speed_planner.launch.py
+│   ├── config/
+│   │   └── simple_speed_planner.yaml
 │   └── src/
-│       └── speed_planner.cpp
+│       └── simple_speed_planner.cpp
 │
 ├ How To Play.txt # Contains How to Run My Packages
 │
