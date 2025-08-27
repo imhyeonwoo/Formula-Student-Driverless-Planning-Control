@@ -35,8 +35,8 @@ pure_pursuit_adaptive:
     outer_offset_max_m: 1.0
     outer_offset_tau_max: 0.7
     outer_offset_kappa_gate: 0.03
-    track_half_width_m: 0.0   # 알면 설정 (예: 4.5/2=2.25)
-    track_margin_m: 0.2
+    track_half_width_m: 2.5   # 알면 설정 (예: 4.5/2=2.25)
+    track_margin_m: 0.2   # 차량이 트랙 경계에 너무 가까이 가지 않도록 마진 설정
 
     # Command shaping
     publish_rate_hz: 50.0
