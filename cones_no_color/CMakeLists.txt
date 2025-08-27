@@ -1,7 +1,7 @@
 # ──────────────────────────────────────────────
 # cones_ukf/CMakeLists.txt
 # ── 새 노드를 추가할 때 건드려야 할 곳마다 ★주석★ 표시 ──
-cmake_minimum_required(VERSION 3.8)
+cmake_minimum_required(VERSION 3.18)
 project(cones_no_color)
 
 # ---- C++ 표준 ----

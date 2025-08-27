@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.5)
+cmake_minimum_required(VERSION 3.15)
 project(gps_global_planner)
 
 # ──────────────── 빌드 옵션 ────────────────

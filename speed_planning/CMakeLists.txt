@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.8)
+cmake_minimum_required(VERSION 3.18)
 project(speed_planning)
 
 if(NOT CMAKE_CXX_STANDARD)  # C++17
