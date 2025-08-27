@@ -171,6 +171,28 @@ ros2 run cones_no_color reference_path_planning.py
   for smoother tracking, improving trajectory stability under diverse driving conditions.
 </p>
 
+---
+
+<div align="center">
+  <img src="docs/images/teammates/potential field1.gif" width="45%" />
+  <img src="docs/images/teammates/potential field2.gif" width="45%" />
+  <br>
+  <b>Potential Field-Based Local Path Planning</b>
+</div>
+
+<p>
+  This GIF demonstrates <b>local path planning using a Potential Field method</b>. The algorithm generates a field 
+  around all detected cones and identifies the lowest "trough" line as the optimal drivable path. 
+  The selected points are refined with <b>B-spline interpolation</b> to generate a smooth and continuous 
+  local path relative to the vehicle's <code>base_link</code> frame.
+</p>
+
+<ul>
+  <li><b>Colored Grid:</b> Potential field intensity map</li>
+  <!-- <li><b>Pink Line:</b> Trough path before smoothing</li> -->
+  <li><b>Pink Line:</b> Final smoothed local path</li>
+  <li><b>Blue / Yellow Spheres:</b> Right and Left cones respectively</li>
+</ul>
 
 
 ---
