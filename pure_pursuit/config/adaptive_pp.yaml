@@ -1,0 +1,85 @@
+pure_pursuit_adaptive:
+  ros__parameters:
+    # I/O
+    path_topic: "/local_planned_path"
+    speed_topic: "/current_speed"
+    steer_topic: "/cmd/steer_adptive"
+    debug_marker_topic: "/pure_pursuit/debug_markers"
+    base_frame: "base_link"
+
+    # Vehicle
+    wheelbase_m: 1.295
+
+    # LAD scheduling
+    use_speed_term: true
+    L0: 1.5
+    k_v: 0.6
+    use_curvature_term: true
+    k_curv: 0.0
+    epsilon_kappa: 1.0e-6
+    Ld_min: 1.0
+    Ld_max: 6.0
+
+    # Target selection
+    use_arc_length_selection: true
+    x_forward_only: true
+    forward_margin_x: -0.2
+
+    # Outer-offset (pd -> pl)
+    outer_offset_enable: true
+    alpha_max_m: 3.0
+    beta_max: 3.0
+    curv_window_m: 2.0
+    outer_offset_max_m: 1.0
+    outer_offset_tau_max: 0.7
+    outer_offset_kappa_gate: 0.03
+    track_half_width_m: 0.0   # 알면 설정 (예: 4.5/2=2.25)
+    track_margin_m: 0.2
+
+    # Command shaping
+    publish_rate_hz: 50.0
+    steer_limit_deg: 30.0
+    steer_rate_limit_deg_per_s: 360.0
+    ema_tau_cmd: 0.12
+    ema_tau_speed: 0.20
+
+    # Noise suppression (new)
+    sticky_window_pts: 15
+    kappa_smooth_window_pts: 3
+    target_ema_tau: 0.08
+
+    # RViz2 debug
+    show_lookahead_circle: true
+    show_points: true
+    show_tangent: true
+    show_offset_vec: true
+    show_selected_path: false
+    show_steer_arrow: true
+    show_steer_text: false
+    marker_alpha: 1.0
+    circle_points: 60
+
+    # Colors
+    color_pw_r: 0.10
+    color_pw_g: 0.60
+    color_pw_b: 1.00
+
+    color_pd_r: 0.10
+    color_pd_g: 1.00
+    color_pd_b: 0.10
+
+    color_pl_r: 1.00
+    color_pl_g: 0.10
+    color_pl_b: 0.80
+
+    color_tan_r: 1.00
+    color_tan_g: 0.85
+    color_tan_b: 0.10
+
+    color_vec_r: 0.00
+    color_vec_g: 0.90
+    color_vec_b: 1.00
+
+    color_cir_r: 1.00
+    color_cir_g: 1.00
+    color_cir_b: 1.00
