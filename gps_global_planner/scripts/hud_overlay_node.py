@@ -7,7 +7,7 @@ from rclpy.node import Node
 from rclpy.qos import qos_profile_sensor_data
 
 from std_msgs.msg import Float32
-from sensor_msgs.msg import Imu
+from sensor_msgs.msg import Imu, NavSatFix
 from nav_msgs.msg import Odometry
 from rviz_2d_overlay_msgs.msg import OverlayText
 
@@ -41,6 +41,7 @@ class HudOverlayNode(Node):
         self.create_subscription(Float32, '/cmd/steer', self.cb_target_steer, qos)
         self.create_subscription(Imu, '/imu/processed', self.cb_imu, qos)  # yaw는 여기서 계산하지 않음
         self.create_subscription(Odometry, '/odometry/filtered', self.cb_odom, qos)
+        self.create_subscription(NavSatFix, '/ublox_gps_node/fix', self.cb_fix, qos)
 
         # (선택) 보정 yaw Float32(rad)를 직접 쓰고 싶다면 주석 해제
         # self.create_subscription(Float32, '/global_yaw/complementary', self.cb_yaw_rad, qos)
@@ -52,6 +53,12 @@ class HudOverlayNode(Node):
         self.target_steer = 0.0
         self.yaw_deg = 0.0
         self.position = (0.0, 0.0)
+
+        # GPS 오차 (1-σ, m)
+        self.gps_sigma_e = float('nan')  # East 표준편차
+        self.gps_sigma_n = float('nan')  # North 표준편차
+        self.gps_drms = float('nan')     # 수평 단일 값(=sqrt(σ_E^2+σ_N^2))
+        self.gps_cov_ok = False
 
         # ===== Timer =====
         self.create_timer(0.10, self.publish_overlay)  # 10Hz
@@ -84,13 +91,38 @@ class HudOverlayNode(Node):
     def cb_yaw_rad(self, msg: Float32):
         self.yaw_deg = float(msg.data) * 180.0 / math.pi
 
+    def cb_fix(self, msg: NavSatFix):
+        """
+        NavSatFix.position_covariance는 (m^2) 단위 3x3 행렬(행우선).
+        type이 2(DIAGONAL_KNOWN) 또는 3(KNOWN)일 때 대각원소를 신뢰.
+        cov[0]: East, cov[4]: North, cov[8]: Up
+        """
+        cov = msg.position_covariance
+        if msg.position_covariance_type in (2, 3) and len(cov) == 9:
+            try:
+                var_e = max(float(cov[0]), 0.0)
+                var_n = max(float(cov[4]), 0.0)
+                # Up은 표시 안 하지만 안전하게 읽어만 둠
+                # var_u = max(float(cov[8]), 0.0)
+
+                self.gps_sigma_e = math.sqrt(var_e)  # 1-σ, m
+                self.gps_sigma_n = math.sqrt(var_n)  # 1-σ, m
+                self.gps_drms = math.hypot(self.gps_sigma_e, self.gps_sigma_n)  # 단일 수평 값
+
+                self.gps_cov_ok = True
+            except Exception as e:
+                self.get_logger().warn(f'GPS covariance parse error: {e}')
+                self.gps_cov_ok = False
+        else:
+            self.gps_cov_ok = False
+
     # ---------- Overlay ----------
     def publish_overlay(self):
         text = OverlayText()
         text.action = OverlayText.ADD
         # 컴팩트하게: 화면 상단에 작은 박스
-        text.width = 350          # int
-        text.height = 150          # int
+        text.width = 380          # int
+        text.height = 195         # int
         text.text_size = 12.0     # float
         text.line_width = 1       # int
         text.font = "DejaVu Sans Mono"
@@ -106,6 +138,13 @@ class HudOverlayNode(Node):
         text.bg_color.b = 0.00
         text.bg_color.a = 0.35
 
+        if self.gps_cov_ok:
+            gps_line1 = (f"Pose error E/N: {self.gps_sigma_e:.3f} / {self.gps_sigma_n:.3f} m")
+            gps_line2 = (f"Pose error H  : {self.gps_drms:.3f} m (DRMS)")
+        else:
+            gps_line1 = "Pose error E/N: N/A"
+            gps_line2 = "Pose error H  : N/A"
+
         text.text = (
             f"Speed: {self.current_speed:.2f} m/s (Command: {self.target_speed:.2f} m/s)\n"
             f"\n"
@@ -114,6 +153,9 @@ class HudOverlayNode(Node):
             f"Yaw:   {self.yaw_deg:.1f} deg\n"
             f"\n"
             f"Pose: X={self.position[0]:.2f}, Y={self.position[1]:.2f}\n"
+            f"\n"
+            f"{gps_line1}\n"
+            f"{gps_line2}\n"
         )
 
         self.pub_text.publish(text)
