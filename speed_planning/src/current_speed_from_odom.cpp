@@ -14,7 +14,7 @@ public:
     // ── Parameters ─────────────────────────────────────────
     odom_topic_ = declare_parameter<std::string>("odom_topic", "/odometry/filtered");
     include_z_  = declare_parameter<bool>("include_z", false);             // true면 3D 속도
-    alpha_      = declare_parameter<double>("low_pass_alpha", 1.0);        // 0<α<1: 필터, 1.0: 미적용
+    alpha_      = declare_parameter<double>("low_pass_alpha", 0.2);        // 0<α<1: 필터, 1.0: 미적용
     use_twist_first_ = declare_parameter<bool>("use_twist_first", true);   // false면 포즈 미분 우선
 
     // ── I/O ────────────────────────────────────────────────
