@@ -150,7 +150,7 @@ ros2 run cones_no_color reference_path_planning.py
 ### Several Attempts for Better Planning and Tracking
 
 <p align="center">
-  <img src="docs/images/9adaptive pure pursuit.gif" width="60%"/><br>
+  <img src="docs/images/9adaptive pure pursuit.gif" width="70%"/><br>
   <b>Adaptive Pure Pursuit</b>
 </p>
 
@@ -162,8 +162,10 @@ ros2 run cones_no_color reference_path_planning.py
 </p>
 
 <ul>
-  <li><b>Mint Marker:</b> Look-ahead point of Standard Pure Pursuit</li>
-  <li><b>Pink Marker:</b> Look-ahead point of Adaptive Pure Pursuit</li>
+  <li><b>Mint Marker:</b> Look-Ahead Point of Standard Pure Pursuit</li>
+  <li><b>Pink Marker:</b> Look-Ahead Point of Adaptive Pure Pursuit</li>
+  <li><b>Yellow Arrow:</b> Vehicle Heading Direction based on Standard Pure Pursuit</li>
+<li><b>Orange Arrow:</b> Vehicle Heading Direction based on Adaptive Pure Pursuit</li>
 </ul>
 
 <p>
