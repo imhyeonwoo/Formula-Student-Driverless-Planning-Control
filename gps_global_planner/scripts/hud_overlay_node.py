@@ -89,7 +89,7 @@ class HudOverlayNode(Node):
         text = OverlayText()
         text.action = OverlayText.ADD
         # 컴팩트하게: 화면 상단에 작은 박스
-        text.width = 320          # int
+        text.width = 350          # int
         text.height = 150          # int
         text.text_size = 12.0     # float
         text.line_width = 1       # int
@@ -107,9 +107,9 @@ class HudOverlayNode(Node):
         text.bg_color.a = 0.35
 
         text.text = (
-            f"Speed: {self.current_speed:.2f} m/s (Command: {self.target_speed:.2f})\n"
+            f"Speed: {self.current_speed:.2f} m/s (Command: {self.target_speed:.2f} m/s)\n"
             f"\n"
-            f"Steer: {self.current_steer:.1f} deg (Command: {self.target_steer:.1f})\n"
+            f"Steer: {self.current_steer:.1f} deg (Command: {self.target_steer:.1f} deg)\n"
             f"\n"
             f"Yaw:   {self.yaw_deg:.1f} deg\n"
             f"\n"
