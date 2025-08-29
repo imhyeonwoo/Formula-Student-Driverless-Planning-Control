@@ -181,17 +181,20 @@ ros2 run cones_no_color reference_path_planning.py
 </div>
 
 <p>
+
   This GIF demonstrates <b>local path planning using a Potential Field method</b>. The algorithm generates a field 
-  around all detected cones and identifies the lowest "trough" line as the optimal drivable path. 
-  The selected points are refined with <b>B-spline interpolation</b> to generate a smooth and continuous 
+  around all detected cones and identifies the lowest "trough" line as the optimal drivable path, 
+  marking these as <b>Through Points</b> (mandatory waypoints the path must pass through). 
+  The selected points are then refined with <b>Centripetal Catmull–Rom Spline Interpolation</b> to generate a smooth and continuous 
   local path relative to the vehicle's <code>base_link</code> frame.
 </p>
 
+
 <ul>
   <li><b>Colored Grid:</b> Potential field intensity map</li>
-  <!-- <li><b>Pink Line:</b> Trough path before smoothing</li> -->
+  <li><b>Yellow Dots:</b> Trough Points before smoothing</li>
   <li><b>Pink Line:</b> Final smoothed local path</li>
-  <li><b>Blue / Yellow Spheres:</b> Right and Left cones respectively</li>
+  <li><b>Blue / Yellow Spheres:</b> Left and Right cones respectively</li>
 </ul>
 
 
