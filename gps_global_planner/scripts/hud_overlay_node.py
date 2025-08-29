@@ -32,6 +32,7 @@ class HudOverlayNode(Node):
 
         # ===== Publishers =====
         self.pub_text = self.create_publisher(OverlayText, '/hud/overlay_text', 10)
+        self.pub_kmh = self.create_publisher(Float32, '/current_kmh', 10)  # ← 추가
 
         # ===== Subscribers (Sensor QoS로 호환성 확보) =====
         qos = qos_profile_sensor_data
@@ -43,11 +44,8 @@ class HudOverlayNode(Node):
         self.create_subscription(Odometry, '/odometry/filtered', self.cb_odom, qos)
         self.create_subscription(NavSatFix, '/ublox_gps_node/fix', self.cb_fix, qos)
 
-        # (선택) 보정 yaw Float32(rad)를 직접 쓰고 싶다면 주석 해제
-        # self.create_subscription(Float32, '/global_yaw/complementary', self.cb_yaw_rad, qos)
-
         # ===== State =====
-        self.current_speed = 0.0
+        self.current_speed = 0.0  # m/s
         self.target_speed = 0.0
         self.current_steer = 0.0
         self.target_steer = 0.0
@@ -62,6 +60,7 @@ class HudOverlayNode(Node):
 
         # ===== Timer =====
         self.create_timer(0.10, self.publish_overlay)  # 10Hz
+        self.create_timer(0.10, self.publish_kmh)      # 10Hz, km/h 값 발행
 
         self.get_logger().info('HUD overlay node started (uses /odometry/filtered orientation for yaw).')
 
@@ -87,7 +86,6 @@ class HudOverlayNode(Node):
         self.position = (msg.pose.pose.position.x, msg.pose.pose.position.y)
         self.yaw_deg = quat_to_yaw_deg(msg.pose.pose.orientation)
 
-    # (선택) /global_yaw/complementary를 직접 사용하려면
     def cb_yaw_rad(self, msg: Float32):
         self.yaw_deg = float(msg.data) * 180.0 / math.pi
 
@@ -102,13 +100,10 @@ class HudOverlayNode(Node):
             try:
                 var_e = max(float(cov[0]), 0.0)
                 var_n = max(float(cov[4]), 0.0)
-                # Up은 표시 안 하지만 안전하게 읽어만 둠
-                # var_u = max(float(cov[8]), 0.0)
 
-                self.gps_sigma_e = math.sqrt(var_e)  # 1-σ, m
-                self.gps_sigma_n = math.sqrt(var_n)  # 1-σ, m
-                self.gps_drms = math.hypot(self.gps_sigma_e, self.gps_sigma_n)  # 단일 수평 값
-
+                self.gps_sigma_e = math.sqrt(var_e)
+                self.gps_sigma_n = math.sqrt(var_n)
+                self.gps_drms = math.hypot(self.gps_sigma_e, self.gps_sigma_n)
                 self.gps_cov_ok = True
             except Exception as e:
                 self.get_logger().warn(f'GPS covariance parse error: {e}')
@@ -116,18 +111,16 @@ class HudOverlayNode(Node):
         else:
             self.gps_cov_ok = False
 
-    # ---------- Overlay ----------
+    # ---------- Publishers ----------
     def publish_overlay(self):
         text = OverlayText()
         text.action = OverlayText.ADD
-        # 컴팩트하게: 화면 상단에 작은 박스
-        text.width = 380          # int
-        text.height = 195         # int
-        text.text_size = 12.0     # float
-        text.line_width = 1       # int
+        text.width = 380
+        text.height = 195
+        text.text_size = 12.0
+        text.line_width = 1
         text.font = "DejaVu Sans Mono"
 
-        # 색상 (RGBA float)
         text.fg_color.r = 0.60
         text.fg_color.g = 1.00
         text.fg_color.b = 1.00
@@ -139,8 +132,8 @@ class HudOverlayNode(Node):
         text.bg_color.a = 0.35
 
         if self.gps_cov_ok:
-            gps_line1 = (f"Pose error E/N: {self.gps_sigma_e:.3f} / {self.gps_sigma_n:.3f} m")
-            gps_line2 = (f"Pose error H  : {self.gps_drms:.3f} m (DRMS)")
+            gps_line1 = f"Pose error E/N: {self.gps_sigma_e:.3f} / {self.gps_sigma_n:.3f} m"
+            gps_line2 = f"Pose error H  : {self.gps_drms:.3f} m (DRMS)"
         else:
             gps_line1 = "Pose error E/N: N/A"
             gps_line2 = "Pose error H  : N/A"
@@ -159,6 +152,12 @@ class HudOverlayNode(Node):
         )
 
         self.pub_text.publish(text)
+
+    def publish_kmh(self):
+        """현재 속도를 km/h로 변환하여 퍼블리시"""
+        kmh_msg = Float32()
+        kmh_msg.data = self.current_speed * 3.6
+        self.pub_kmh.publish(kmh_msg)
 
 
 def main(args=None):
