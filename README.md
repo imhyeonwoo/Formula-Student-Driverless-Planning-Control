@@ -4,9 +4,7 @@ A collection of ROS2 packages dedicated to **Path/Speed Planning and Tracking** 
 This repository manages my personal work for the **Planning / (High-Level)Control Team** in the Student Mobility Competition (Konkuk University - Team K.A.I.).
 
 ```markdown
-
 ## Project Structure
-
 
 Planning/
 ├── cone_labeling/ # Classifies Cones into Left and Rigth Sides(Using DBSCAN)
@@ -56,6 +54,20 @@ Planning/
 │   │   └── simple_speed_planner.yaml
 │   └── src/
 │       └── simple_speed_planner.cpp
+│
+├── pure_pursuit/ # Path Tracking Algorithm - 3 different versions
+│   ├── config/ # paremeter tuning files
+│   │   ├── adaptive_pp.yaml
+│   │   ├── pure_pursuit_dynamic.yaml
+│   │   └── pure_pursuit_static.yaml
+│   ├── launch/
+│   │   ├── adaptive_pure_pursuit.launch.py
+│   │   ├── pure_pursuit_dynamic.launch.py
+│   │   └── pure_pursuit_static.launch.py
+│   └── src/  # 3 different methods nodes
+│       ├── pure_pursuit_adaptive.cpp
+│       ├── pure_pursuit_dynamic.cpp
+│       └── pure_pursuit_static.cpp
 │
 ├ How To Play.txt # Contains How to Run My Packages
 │
