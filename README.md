@@ -7,16 +7,15 @@ This repository manages my personal work for the **Planning / (High-Level)Contro
 ## Project Structure
 
 Planning/
-├── cone_labeling/ # Classifies Cones into Left and Rigth Sides(Using DBSCAN)
-│   ├── launch/
-│   │   └── cone_labeling.launch.py
-│   └── src/
-│       ├── cone_classifier.cpp
-│       ├── cone_delaunay_connector.cpp
-│       └── midpoint_bspline_interpolator.cpp
+├── cone_labeling_k/ # Potential Field-based Planning
+│   └── cone_labeling_k
+│       ├── launch
+│       │   └── cone_labeling.launch.py
+│       ├── potential_field.py  # latest version(fixed several problems)
+│       └── potential_field.py.BAK  # old version
 │
 ├── cones_no_color/ # Local path generation based on traffic cones
-│   ├── msg/ # ModifiedFloat32MultiArray.msg
+│   ├── msg/  # custon msg that describes detected cones from Perception
 │   ├── scripts/
 │   │   ├── cone_safe_zone.py
 │   │   ├── reference_path_planning.py
@@ -52,7 +51,7 @@ Planning/
 │   │   └── simple_speed_planner.launch.py
 │   ├── config/
 │   │   └── simple_speed_planner.yaml
-│   └── src/
+│   └── src/  # Publishes speed and rpm command
 │       └── simple_speed_planner.cpp
 │
 ├── pure_pursuit/ # Path Tracking Algorithm - 3 different versions
@@ -69,9 +68,7 @@ Planning/
 │       ├── pure_pursuit_dynamic.cpp
 │       └── pure_pursuit_static.cpp
 │
-├ How To Play.txt # Contains How to Run My Packages
-│
-└── Understanding TF Relationships in the Planning Pipeline.pdf
+└ How To Play.txt # Contains How to Run My Packages
 ```
 
 ---
@@ -238,3 +235,6 @@ ros2 run cones_no_color reference_path_planning.py
 
 - imhyeonwoo21@gmail.com
 - imhyeonwoo21@konkuk.ac.kr
+- https://www.youtube.com/@hwi4201
+
+- I can send you bag files I used if you want
