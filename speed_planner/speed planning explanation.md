@@ -65,10 +65,10 @@ kappa  = 2*area2 / (a*b*c);  // det = 2A ⇒ κ = 4A/(abc)
 | 단계 | 설명 | 수식 / 의사코드 |
 |------|------|----------------|
 |① **초기화**|`speed[i] = max_speed` (전 구간)|—|
-|② **곡률 제한**|`speed[i] = min(speed[i], v_curve)`|`v_curve = √(a_lat_max / (|κ|+ε))`|
+| ② **곡률 제한** | `speed[i] = min(speed[i], v_curve)` | v_curve = sqrt(a_lat,max / (|$\kappa$| + $\epsilon$)) |
 |③ **시작점 보정**|`speed[0] = min(speed[0], current_speed)`|—|
-|④ **Backward pass**<br>(감속 제약)|`for j=N-2→0:`<br>`dist = ‖Pj+1-Pj‖`<br>`v_allow = √(v_next² + 2·a_decel·dist)`<br>`speed[j] = min(speed[j], v_allow)`|방정식: \(v_{allow}=\sqrt{v_{next}^2 + 2a_{decel}Δs}\)|
-|⑤ **Forward pass**<br>(가속 제약)|`for j=0→N-2:`<br>`dist = ‖Pj+1-Pj‖`<br>`v_allow = √(v_curr² + 2·a_accel·dist)`<br>`speed[j+1] = min(speed[j+1], v_allow)`|방정식: \(v_{allow}=\sqrt{v_{curr}^2 + 2a_{accel}Δs}\)|
+|④ **Backward pass**<br>(감속 제약)|`for j=N-2→0:`<br>`dist = ‖Pj+1-Pj‖`<br>`v_allow = √(v_next² + 2·a_decel·dist)`<br>`speed[j] = min(speed[j], v_allow)`|방정식: $v_{allow}=\sqrt{v_{next}^2 + 2a_{decel}Δs}$|
+|⑤ **Forward pass**<br>(가속 제약)|`for j=0→N-2:`<br>`dist = ‖Pj+1-Pj‖`<br>`v_allow = √(v_curr² + 2·a_accel·dist)`<br>`speed[j+1] = min(speed[j+1], v_allow)`|방정식: $v_{allow}=\sqrt{v_{curr}^2 + 2a_{accel}Δs}$|
 |⑥ **퍼블리시**|`Float32MultiArray` 로 퍼블리시|—|
 
 
@@ -90,6 +90,8 @@ kappa  = 2*area2 / (a*b*c);  // det = 2A ⇒ κ = 4A/(abc)
 SpeedPlanner
  ├─ Publishers
  │   └─ /desired_speed_profile   (std_msgs/Float32MultiArray)
+ │   ├─ /cmd/speed               (std_msgs/Float32)
+ │   └─ /cmd/rpm                 (std_msgs/Float32)
  ├─ Subscriptions
  │   ├─ /local_planned_path      (nav_msgs/Path)
  │   └─ /current_speed           (std_msgs/Float32)
