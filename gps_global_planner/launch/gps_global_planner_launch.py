@@ -14,16 +14,17 @@ def generate_launch_description():
     enable_hud = LaunchConfiguration('enable_hud')
 
     # ───────────── 기준 좌표 ─────────────
-    ref_lat_arg = DeclareLaunchArgument('ref_lat', default_value='37.540091')
-    ref_lon_arg = DeclareLaunchArgument('ref_lon', default_value='127.076555')
+    ref_lat_arg = DeclareLaunchArgument('ref_lat', default_value='37.237394')
+    ref_lon_arg = DeclareLaunchArgument('ref_lon', default_value='126.770827')
     ref_lat = LaunchConfiguration('ref_lat')
     ref_lon = LaunchConfiguration('ref_lon')
     # 기본 좌표는 건국대학교 일감호 와우도 기준 : (37.540091, 127.076555)
+    # 대회장 레퍼런스 좌표 : (37.237394, 126.770827)
 
     # ───────────── CSV 기본 경로 ─────────────
     csv_default = os.path.join(
         get_package_share_directory('gps_global_planner'),
-        'data', 'nocheon.csv'
+        'data', '250830_test_drive_4.csv'
     )
     csv_arg  = DeclareLaunchArgument('csv_file', default_value=csv_default)
     csv_file = LaunchConfiguration('csv_file')
