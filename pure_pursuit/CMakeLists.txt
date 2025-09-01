@@ -53,10 +53,6 @@ install(TARGETS
   pure_pursuit_adaptive_node
   DESTINATION lib/${PROJECT_NAME})
 
-install(PROGRAMS
-  scripts/traj_predictor.py
-  DESTINATION lib/${PROJECT_NAME})
-
 install(DIRECTORY config
   DESTINATION share/${PROJECT_NAME})
 
