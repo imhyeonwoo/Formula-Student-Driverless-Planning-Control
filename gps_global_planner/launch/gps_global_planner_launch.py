@@ -24,7 +24,8 @@ def generate_launch_description():
     # ───────────── CSV 기본 경로 ─────────────
     csv_default = os.path.join(
         get_package_share_directory('gps_global_planner'),
-        'data', '250830_test_drive_4.csv'
+        'data', '4planning_250830_curved.csv'   # 조향 코스
+        # 'data', '4planning_250830_straight.csv'   # 가속 코스
     )
     csv_arg  = DeclareLaunchArgument('csv_file', default_value=csv_default)
     csv_file = LaunchConfiguration('csv_file')
