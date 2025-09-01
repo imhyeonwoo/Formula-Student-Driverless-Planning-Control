@@ -4,6 +4,13 @@
 #include <visualization_msgs/msg/marker.hpp>
 #include <visualization_msgs/msg/marker_array.hpp>
 
+#include <geometry_msgs/msg/pose_stamped.hpp>
+#include <geometry_msgs/msg/transform_stamped.hpp>
+
+#include <tf2_ros/transform_listener.h>
+#include <tf2_ros/buffer.h>
+#include <tf2_geometry_msgs/tf2_geometry_msgs.hpp>
+
 #include <vector>
 #include <string>
 #include <algorithm>
@@ -13,7 +20,11 @@
 
 class PurePursuitAdaptive : public rclcpp::Node {
 public:
-  PurePursuitAdaptive() : rclcpp::Node("pure_pursuit_adaptive") {
+  PurePursuitAdaptive()
+  : rclcpp::Node("pure_pursuit_adaptive"),
+    tf_buffer_(this->get_clock()),
+    tf_listener_(tf_buffer_) {
+
     // ----- Parameters -----
     path_topic_    = declare_parameter<std::string>("path_topic", "/local_planned_path");
     speed_topic_   = declare_parameter<std::string>("speed_topic", "/current_speed");
@@ -36,7 +47,7 @@ public:
     // 타깃 선택
     use_arc_length_selection_ = declare_parameter<bool>("use_arc_length_selection", true);
     x_forward_only_           = declare_parameter<bool>("x_forward_only", true);
-    forward_margin_x_         = declare_parameter<double>("forward_margin_x", -0.2); // x>-0.2만 전방으로 간주
+    forward_margin_x_         = declare_parameter<double>("forward_margin_x", -0.2); // 참고용
 
     // 커팅 억제(pd->pl 바깥 이동)
     outer_offset_enable_  = declare_parameter<bool>("outer_offset_enable", true);
@@ -98,8 +109,9 @@ public:
     timer_ = create_wall_timer(std::chrono::duration_cast<std::chrono::milliseconds>(period),
               std::bind(&PurePursuitAdaptive::onTimer, this));
 
-    RCLCPP_INFO(get_logger(), "PurePursuitAdaptive started. path='%s', speed='%s' -> steer='%s' (deg)",
-                path_topic_.c_str(), speed_topic_.c_str(), steer_topic_.c_str());
+    RCLCPP_INFO(get_logger(),
+      "PurePursuitAdaptive started. path='%s', speed='%s' -> steer='%s' (deg) | base_frame='%s'",
+      path_topic_.c_str(), speed_topic_.c_str(), steer_topic_.c_str(), base_frame_.c_str());
   }
 
 private:
@@ -108,15 +120,42 @@ private:
 
   // ---------- Callbacks ----------
   void onPath(const nav_msgs::msg::Path::SharedPtr msg) {
-    last_path_ = *msg;
-    frame_id_from_path_ = last_path_.header.frame_id.empty() ? base_frame_ : last_path_.header.frame_id;
+    nav_msgs::msg::Path path_in_base;
 
+    // frame 일치 여부 확인 후 변환
+    if (!msg->header.frame_id.empty() && msg->header.frame_id != base_frame_) {
+      try {
+        geometry_msgs::msg::TransformStamped tf =
+          tf_buffer_.lookupTransform(base_frame_, msg->header.frame_id, tf2::TimePointZero);
+
+        path_in_base.header.frame_id = base_frame_;
+        path_in_base.header.stamp = msg->header.stamp;
+        path_in_base.poses.reserve(msg->poses.size());
+
+        for (const auto& ps : msg->poses) {
+          geometry_msgs::msg::PoseStamped out;
+          tf2::doTransform(ps, out, tf);
+          path_in_base.poses.push_back(out);
+        }
+      } catch (const tf2::TransformException& ex) {
+        RCLCPP_WARN(get_logger(), "TF transform failed: %s. Using raw path.", ex.what());
+        path_in_base = *msg; // 프레임 다르면 내부 계산이 틀어질 수 있음
+      }
+    } else {
+      path_in_base = *msg;
+    }
+
+    last_path_ = path_in_base;
+    frame_id_from_path_ = base_frame_;  // 이후 디버그 마커도 base_link 기준으로
+
+    // 내부 표현 구성
     pts_.clear();
     pts_.reserve(last_path_.poses.size());
     for (const auto& ps : last_path_.poses) {
       pts_.push_back({static_cast<double>(ps.pose.position.x),
                       static_cast<double>(ps.pose.position.y)});
     }
+
     // 누적 호길이
     cum_s_.assign(pts_.size(), 0.0);
     for (size_t i = 1; i < pts_.size(); ++i) {
@@ -142,27 +181,33 @@ private:
 
   // ---------- Timer loop ----------
   void onTimer() {
-    // 0) 안전검사
     if (pts_.size() < 2) {
       publishSteerDeg(smoothDeg(0.0));
       publishDebugMarkersEmpty();
       return;
     }
 
-    // 1) LAD 계산
-    const double Ld = computeLd();
+    // (A) 원점(base_link)의 경로 연속 투영 -> s0
+    Projection prj = projectBaseToPath();
+    if (prj.seg_idx < 0) {
+      publishSteerDeg(smoothDeg(0.0));
+      publishDebugMarkersEmpty();
+      return;
+    }
 
-    // 2) pw/pd 선택 (스티키 윈도우)
-    int idx_pw = findNearestIndexSticky();
-    if (idx_pw < 0) { publishSteerDeg(smoothDeg(0.0)); publishDebugMarkersEmpty(); return; }
-    int idx_pd = selectTargetIndexSticky(idx_pw, Ld);
-    if (idx_pd < 0) idx_pd = static_cast<int>(pts_.size()) - 1;
+    // (B) Ld 계산(투영 위치 주변 곡률 사용)
+    const double Ld = computeLd(prj.s_proj);
 
-    Pt pw = pts_[static_cast<size_t>(idx_pw)];
-    Pt pd = pts_[static_cast<size_t>(idx_pd)];
+    // (C) pd 선택: s_target = s0 + Ld (보간점)
+    const double s_target = prj.s_proj + Ld;
+    Pt pd = pointAtS(s_target);
+    const int idx_pw = indexAtS(prj.s_proj);
+    const int idx_pd = indexAtS(s_target);
+
+    // (D) pw = base_link 원점, pl = pd에서 바깥 오프셋 적용
+    Pt pw{0.0, 0.0};
     Pt pl = pd;
 
-    // 3) 바깥 이동(커팅 코너 억제 + 게이팅/상한)
     if (outer_offset_enable_) {
       const double k_pw = signedKappaSmoothedAt(idx_pw, kappa_smooth_window_pts_);
       const double k_pd = signedKappaSmoothedAt(idx_pd, kappa_smooth_window_pts_);
@@ -180,7 +225,7 @@ private:
       if (std::abs(k_pd) < outer_offset_kappa_gate_) tau = 0.0;
 
       // pd에서의 접선/법선, 바깥 방향
-      Pt t = tangentAt(idx_pd);
+      Pt t = tangentAtS(s_target);
       const double tnorm = std::hypot(t.x, t.y);
       if (tnorm > 1e-6) { t.x/=tnorm; t.y/=tnorm; } else { t = {1.0, 0.0}; }
       Pt n = { -t.y, t.x }; // 좌측 법선
@@ -197,10 +242,11 @@ private:
       pl = { pd.x + outward.x * off, pd.y + outward.y * off };
     }
 
-    // 4) pl 좌표 EMA(타깃 스무딩)
+    // (E) pl 좌표 EMA(타깃 스무딩)
     {
       const rclcpp::Time now = now_();
-      const double dt = (last_target_time_.nanoseconds()==0) ? (1.0 / std::max(1e-3, publish_rate_hz_))
+      const double dt = (last_target_time_.nanoseconds()==0)
+                        ? (1.0 / std::max(1e-3, publish_rate_hz_))
                         : (now - last_target_time_).seconds();
       last_target_time_ = now;
       const double alpha = std::exp(-std::max(0.0, dt) / std::max(1e-3, target_ema_tau_));
@@ -210,117 +256,112 @@ private:
       pl_prev_ = pl;
     }
 
-    // 5) 조향 계산 (좌회전 +deg)
+    // (F) 조향 계산 (좌회전 +deg)
     const double Ld2 = std::max(1e-9, pl.x*pl.x + pl.y*pl.y);
     const double delta_rad = std::atan2(2.0 * wheelbase_m_ * pl.y, Ld2);
     double delta_deg = delta_rad * 180.0 / kPi;
 
-    // 6) rate-limit + EMA + 제한
+    // (G) rate-limit + EMA + 제한
     delta_deg = clip(delta_deg, -steer_limit_deg_, steer_limit_deg_);
     const double cmd_deg = smoothDeg(delta_deg);
 
-    // 7) Publish
+    // (H) Publish
     publishSteerDeg(cmd_deg);
     publishDebugMarkers(Ld, pw, pd, pl, idx_pw, idx_pd, cmd_deg);
 
-    // 8) 스티키 인덱스 갱신
+    // (I) 스티키 인덱스 갱신
     idx_pw_prev_ = idx_pw;
     idx_pd_prev_ = idx_pd;
   }
 
   // ---------- Core helpers ----------
-  double computeLd() const {
-    double Ld = use_speed_term_ ? (L0_ + k_v_ * std::max(0.0, v_filt_)) : L0_;
-    if (use_curv_term_ && k_curv_ != 0.0) {
-      const double kappa = evalCurvatureAbsAt(curv_window_m_);
-      if (std::isfinite(kappa)) {
-        Ld += k_curv_ / (std::abs(kappa) + eps_kappa_);
+  struct Projection {
+    int seg_idx;      // 투영된 구간의 i (구간 [i, i+1])
+    double t;         // 구간 내 보간계수 [0,1]
+    double s_proj;    // 누적호길이 좌표
+    Pt p;             // 투영된 실제 좌표
+  };
+
+  Projection projectBaseToPath() const {
+    Projection best{ -1, 0.0, 0.0, {0,0} };
+    if (pts_.size() < 2) return best;
+
+    double best_d2 = 1e100;
+    for (int i = 0; i < (int)pts_.size()-1; ++i) {
+      Pt A = pts_[i], B = pts_[i+1];
+      Pt AB{ B.x - A.x, B.y - A.y };
+      double ab2 = AB.x*AB.x + AB.y*AB.y;
+      if (ab2 < 1e-12) continue;
+
+      // 원점 O=(0,0)의 투영 (A를 원점 기준으로)
+      Pt AO{ -A.x, -A.y };
+      double t = (AO.x*AB.x + AO.y*AB.y) / ab2;
+      t = std::clamp(t, 0.0, 1.0);
+
+      Pt P{ A.x + t*AB.x, A.y + t*AB.y };
+      double d2 = P.x*P.x + P.y*P.y;
+      if (d2 < best_d2) {
+        best_d2 = d2;
+        best.seg_idx = i;
+        best.t = t;
+        best.p = P;
+        double seg_len = std::hypot(AB.x, AB.y);
+        best.s_proj = cum_s_[i] + t * seg_len;
       }
     }
-    return clip(Ld, Ld_min_, Ld_max_);
+    return best;
   }
 
-  int findNearestIndexSticky() const {
-    if (pts_.empty()) return -1;
-    // 최초는 전체 검색
-    if (idx_pw_prev_ < 0) {
-      double best = 1e100; int idx=-1;
-      for (size_t i=0;i<pts_.size();++i){
-        const double d = std::hypot(pts_[i].x, pts_[i].y);
-        if (x_forward_only_ && pts_[i].x <= forward_margin_x_) continue;
-        if (d < best){ best = d; idx = (int)i; }
-      }
-      if (idx < 0) { // 전방 없으면 전체에서
-        for (size_t i=0;i<pts_.size();++i){
-          const double d = std::hypot(pts_[i].x, pts_[i].y);
-          if (d < best){ best = d; idx = (int)i; }
-        }
-      }
-      return idx;
-    }
-    // 스티키 윈도우 내 검색
-    int L = std::max(0, idx_pw_prev_ - sticky_window_pts_);
-    int R = std::min((int)pts_.size()-1, idx_pw_prev_ + sticky_window_pts_);
-    double best=1e100; int idx=-1;
-    for (int i=L; i<=R; ++i){
-      if (x_forward_only_ && pts_[(size_t)i].x <= forward_margin_x_) continue;
-      const double d = std::hypot(pts_[(size_t)i].x, pts_[(size_t)i].y);
-      if (d < best){ best = d; idx = i; }
-    }
-    if (idx < 0) { // 윈도우 내 전방 없으면 cand 유지
-      for (int i=L; i<=R; ++i){
-        const double d = std::hypot(pts_[(size_t)i].x, pts_[(size_t)i].y);
-        if (d < best){ best = d; idx = i; }
-      }
-    }
-    return idx;
+  int indexAtS(double s) const {
+    if (cum_s_.empty()) return -1;
+    if (s <= cum_s_.front()) return 0;
+    if (s >= cum_s_.back())  return static_cast<int>(cum_s_.size()) - 1;
+    auto it = std::lower_bound(cum_s_.begin(), cum_s_.end(), s);
+    return static_cast<int>(std::distance(cum_s_.begin(), it));
   }
 
-  int selectTargetIndexSticky(int idx_start, double Ld) const {
-    const int N = static_cast<int>(pts_.size());
-    if (N<=0) return -1;
-
-    auto cand_from_arc = [&](){
-      if (!use_arc_length_selection_ || cum_s_.empty()) return -1;
-      const double s0 = cum_s_[static_cast<size_t>(idx_start)];
-      const double s_target = s0 + Ld;
-      auto it = std::lower_bound(cum_s_.begin()+idx_start, cum_s_.end(), s_target);
-      if (it == cum_s_.end()) return N-1;
-      return static_cast<int>(std::distance(cum_s_.begin(), it));
-    };
-
-    auto cand_from_euclid = [&](){
-      for (int i=idx_start; i<N; ++i) {
-        const auto& p = pts_[(size_t)i];
-        if (x_forward_only_ && p.x <= forward_margin_x_) continue;
-        if (std::hypot(p.x, p.y) >= Ld) return i;
-      }
-      for (int i=N-1; i>=0; --i) {
-        if (!x_forward_only_ || pts_[(size_t)i].x > forward_margin_x_) return i;
-      }
-      return N-1;
-    };
-
-    int cand = (use_arc_length_selection_) ? cand_from_arc() : cand_from_euclid();
-    // 전방 조건 보정
-    if (x_forward_only_ && cand >= 0 && pts_[(size_t)cand].x <= forward_margin_x_) {
-      for (int i=cand; i<N; ++i) {
-        if (pts_[(size_t)i].x > forward_margin_x_) { cand = i; break; }
-      }
+  Pt pointAtS(double s) const {
+    Pt out{0.0, 0.0};
+    if (pts_.empty()) return out;
+    if (pts_.size() == 1 || cum_s_.size() != pts_.size()) {
+      return pts_.front();
     }
+    if (s <= cum_s_.front()) return pts_.front();
+    if (s >= cum_s_.back())  return pts_.back();
 
-    // 스티키 범위 클램프
-    if (idx_pd_prev_ >= 0) {
-      const int L = std::max(0, idx_pd_prev_ - sticky_window_pts_);
-      const int R = std::min(N-1, idx_pd_prev_ + sticky_window_pts_);
-      cand = std::clamp(cand, L, R);
-    }
-    return cand;
+    auto it = std::lower_bound(cum_s_.begin(), cum_s_.end(), s);
+    int idx = static_cast<int>(std::distance(cum_s_.begin(), it));
+    if (idx <= 0) return pts_.front();
+
+    int i0 = idx - 1, i1 = idx;
+    double s0 = cum_s_[i0], s1 = cum_s_[i1];
+    double denom = std::max(1e-9, s1 - s0);
+    double t = (s - s0) / denom;
+    Pt A = pts_[i0], B = pts_[i1];
+    return { A.x + t*(B.x - A.x), A.y + t*(B.y - A.y) };
   }
 
-  // ----- 곡률 계산(스무딩) -----
+  Pt tangentAtS(double s) const {
+    if (pts_.size() < 2) return {1.0, 0.0};
+    if (s <= cum_s_.front()) {
+      Pt d{ pts_[1].x - pts_[0].x, pts_[1].y - pts_[0].y };
+      return d;
+    }
+    if (s >= cum_s_.back()) {
+      size_t N = pts_.size();
+      Pt d{ pts_[N-1].x - pts_[N-2].x, pts_[N-1].y - pts_[N-2].y };
+      return d;
+    }
+    auto it = std::lower_bound(cum_s_.begin(), cum_s_.end(), s);
+    int idx = static_cast<int>(std::distance(cum_s_.begin(), it));
+    int i0 = std::max(0, idx - 1);
+    int i1 = std::min((int)pts_.size()-1, idx);
+    Pt d{ pts_[i1].x - pts_[i0].x, pts_[i1].y - pts_[i0].y };
+    return d;
+  }
+
+  // ---- 곡률 계산(스무딩) ----
   double kappaSignedRawAt(int j) const {
-    // 3점법, 부호 유지
     size_t i = static_cast<size_t>(std::clamp(j, 1, (int)pts_.size()-2));
     const auto &A = pts_[i-1], &B = pts_[i], &C = pts_[i+1];
     const double ax = B.x - A.x, ay = B.y - A.y;
@@ -349,20 +390,21 @@ private:
     return (cnt>0)? (sum/cnt) : 0.0;
   }
 
-  // s_eval (m) 부근의 |κ| (스무딩)
-  double evalCurvatureAbsAt(double s_eval) const {
+  double evalCurvatureAbsNearS(double s_ref) const {
     if (pts_.size() < 3 || cum_s_.empty()) return 0.0;
-    auto it = std::lower_bound(cum_s_.begin(), cum_s_.end(), s_eval);
-    int j = (it == cum_s_.end()) ? ((int)cum_s_.size()-1) : (int)(it - cum_s_.begin());
+    int j = indexAtS(s_ref);
     j = std::clamp(j, 1, (int)pts_.size()-2);
     return absKappaSmoothedAt(j, kappa_smooth_window_pts_);
   }
 
-  Pt tangentAt(int idx) const {
-    size_t j = static_cast<size_t>(std::clamp(idx, 1, (int)pts_.size()-2));
-    const auto &A = pts_[j-1];
-    const auto &C = pts_[j+1];
-    return { C.x - A.x, C.y - A.y };
+  // Ld 계산: 속도항 + (옵션) s_ref 주변 곡률항
+  double computeLd(double s_ref) const {
+    double Ld = use_speed_term_ ? (L0_ + k_v_ * std::max(0.0, v_filt_)) : L0_;
+    if (use_curv_term_ && k_curv_ != 0.0) {
+      const double kappa_abs = evalCurvatureAbsNearS(s_ref);
+      Ld += k_curv_ / (std::abs(kappa_abs) + eps_kappa_);
+    }
+    return clip(Ld, Ld_min_, Ld_max_);
   }
 
   // ---------- Command shaping ----------
@@ -399,6 +441,43 @@ private:
     pub_debug_->publish(arr);
   }
 
+  visualization_msgs::msg::Marker makeSphere(const std::string& ns, int id, const Pt& p,
+                                              double scale, const std_msgs::msg::ColorRGBA& col) {
+    visualization_msgs::msg::Marker m;
+    m.header.frame_id = frame_id_from_path_.empty()? base_frame_ : frame_id_from_path_;
+    m.header.stamp = now_();
+    m.ns = ns; m.id = id; m.type = visualization_msgs::msg::Marker::SPHERE;
+    m.action = visualization_msgs::msg::Marker::ADD;
+    m.pose.position.x = p.x; m.pose.position.y = p.y; m.pose.position.z = 0.05;
+    m.pose.orientation.w = 1.0;
+    m.scale.x = scale; m.scale.y = scale; m.scale.z = scale;
+    m.color = col;
+    return m;
+  }
+
+  visualization_msgs::msg::Marker makeArrow(const std::string& ns, int id,
+                                            const Pt& origin, const Pt& dir_unit,
+                                            double length, double thickness,
+                                            const std_msgs::msg::ColorRGBA& col) {
+    visualization_msgs::msg::Marker a;
+    a.header.frame_id = frame_id_from_path_.empty()? base_frame_ : frame_id_from_path_;
+    a.header.stamp = now_();
+    a.ns = ns; a.id = id; a.type = visualization_msgs::msg::Marker::ARROW;
+    a.action = visualization_msgs::msg::Marker::ADD;
+
+    geometry_msgs::msg::Point p0, p1;
+    p0.x = origin.x; p0.y = origin.y; p0.z = 0.2;
+    p1.x = origin.x + dir_unit.x * length; p1.y = origin.y + dir_unit.y * length; p1.z = 0.2;
+    a.points = {p0, p1};
+
+    a.scale.x = thickness;           // shaft diameter
+    a.scale.y = thickness * 1.8;     // head diameter
+    a.scale.z = thickness * 2.8;     // head length
+    a.color = col;
+    a.pose.orientation.w = 1.0;
+    return a;
+  }
+
   void publishDebugMarkers(double Ld, const Pt& pw, const Pt& pd, const Pt& pl,
                            int idx_pw, int idx_pd, double cmd_deg) {
     visualization_msgs::msg::MarkerArray arr;
@@ -430,14 +509,14 @@ private:
 
     // 1) pw, pd, pl
     if (show_points_) {
-      arr.markers.push_back(makeSphere("pp/pw", 0, pw, 0.25, make_color(color_pw_, marker_alpha_), "pw"));
-      arr.markers.push_back(makeSphere("pp/pd", 0, pd, 0.30, make_color(color_pd_, marker_alpha_), "pd"));
-      arr.markers.push_back(makeSphere("pp/pl", 0, pl, 0.40, make_color(color_pl_, marker_alpha_), "pl"));
+      arr.markers.push_back(makeSphere("pp/pw", 0, pw, 0.25, make_color(color_pw_, marker_alpha_)));
+      arr.markers.push_back(makeSphere("pp/pd", 0, pd, 0.30, make_color(color_pd_, marker_alpha_)));
+      arr.markers.push_back(makeSphere("pp/pl", 0, pl, 0.40, make_color(color_pl_, marker_alpha_)));
     }
 
     // 2) tangent at pd
     if (show_tangent_) {
-      Pt t = tangentAt(idx_pd);
+      Pt t = tangentAtS(cum_s_.empty()? 0.0 : cum_s_[std::clamp(idx_pd, 0, (int)cum_s_.size()-1)]);
       const double nrm = std::hypot(t.x, t.y);
       if (nrm > 1e-6) { t.x/=nrm; t.y/=nrm; }
       arr.markers.push_back(
@@ -510,44 +589,6 @@ private:
     }
 
     pub_debug_->publish(arr);
-  }
-
-  visualization_msgs::msg::Marker makeSphere(const std::string& ns, int id, const Pt& p,
-                                              double scale, const std_msgs::msg::ColorRGBA& col,
-                                              const std::string& /*label*/) {
-    visualization_msgs::msg::Marker m;
-    m.header.frame_id = frame_id_from_path_.empty()? base_frame_ : frame_id_from_path_;
-    m.header.stamp = now_();
-    m.ns = ns; m.id = id; m.type = visualization_msgs::msg::Marker::SPHERE;
-    m.action = visualization_msgs::msg::Marker::ADD;
-    m.pose.position.x = p.x; m.pose.position.y = p.y; m.pose.position.z = 0.05;
-    m.pose.orientation.w = 1.0;
-    m.scale.x = scale; m.scale.y = scale; m.scale.z = scale;
-    m.color = col;
-    return m;
-  }
-
-  visualization_msgs::msg::Marker makeArrow(const std::string& ns, int id,
-                                            const Pt& origin, const Pt& dir_unit,
-                                            double length, double thickness,
-                                            const std_msgs::msg::ColorRGBA& col) {
-    visualization_msgs::msg::Marker a;
-    a.header.frame_id = frame_id_from_path_.empty()? base_frame_ : frame_id_from_path_;
-    a.header.stamp = now_();
-    a.ns = ns; a.id = id; a.type = visualization_msgs::msg::Marker::ARROW;
-    a.action = visualization_msgs::msg::Marker::ADD;
-
-    geometry_msgs::msg::Point p0, p1;
-    p0.x = origin.x; p0.y = origin.y; p0.z = 0.2;
-    p1.x = origin.x + dir_unit.x * length; p1.y = origin.y + dir_unit.y * length; p1.z = 0.2;
-    a.points = {p0, p1};
-
-    a.scale.x = thickness;           // shaft diameter
-    a.scale.y = thickness * 1.8;     // head diameter
-    a.scale.z = thickness * 2.8;     // head length
-    a.color = col;
-    a.pose.orientation.w = 1.0;
-    return a;
   }
 
   // ---------- Utils ----------
@@ -631,6 +672,10 @@ private:
   bool have_pl_prev_{false};
   Pt pl_prev_{};
   rclcpp::Time last_target_time_{};
+
+  // TF2
+  tf2_ros::Buffer tf_buffer_;
+  tf2_ros::TransformListener tf_listener_;
 };
 
 int main(int argc, char** argv) {

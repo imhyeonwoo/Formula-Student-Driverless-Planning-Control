@@ -7,7 +7,7 @@ pure_pursuit_adaptive:
     # 하드웨어 제어에서 발행하는 모터 속도 : /current_speed/motor
     steer_topic: "/cmd/steer"
     debug_marker_topic: "/pure_pursuit/debug_markers"
-    base_frame: "base_link"
+    base_frame: "base_link"   # 내부 계산은 모두 base_link 기준. Path가 다른 frame이면 TF로 변환.
 
     # Vehicle
     wheelbase_m: 1.3
@@ -24,7 +24,7 @@ pure_pursuit_adaptive:
 
     # Target selection
     use_arc_length_selection: true
-    x_forward_only: true
+    x_forward_only: true      # (참고) 이제 s-기반 선택이라 영향은 적지만 유지
     forward_margin_x: -0.2
 
     # Outer-offset (pd -> pl)
@@ -36,7 +36,7 @@ pure_pursuit_adaptive:
     outer_offset_tau_max: 0.7
     outer_offset_kappa_gate: 0.03
     track_half_width_m: 2.5   # 알면 설정 (예: 4.5/2=2.25)
-    track_margin_m: 0.2   # 차량이 트랙 경계에 너무 가까이 가지 않도록 마진 설정
+    track_margin_m: 0.2       # 차량이 트랙 경계에 너무 가까이 가지 않도록 마진
 
     # Command shaping
     publish_rate_hz: 50.0
