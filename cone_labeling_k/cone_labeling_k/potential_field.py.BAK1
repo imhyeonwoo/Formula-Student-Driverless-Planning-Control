@@ -6,8 +6,8 @@
 형성된 Potential Field의 Trough(골)을 필드 영역 전체에 대해 연산하여 저장합니다. (TroughPoints)
 산출된 Trough(골) 좌표에서, 차량(0,0)과 가장 가까운 좌표를 시작으로,
 임계값(DIST_THRESH) 이하이면서 가장 가까운 좌표만 필터링하여 저장합니다. (ValidPath)
-유효한 Trough(골) 좌표를 대상으로 **B-스플라인 스무딩(splprep/splev)** 을 적용하고,
-호길이 등간격 재샘플로 최종 경로를 부드럽게 만듭니다. (SplinedPath)
+유효한 Trough(골) 좌표를 대상으로 Catmull–Rom(centripetal) 스플라인을 진행하고,
+호길이 등간격 재샘플 + Savitzky–Golay 스무딩으로 최종 경로를 부드럽게 만듭니다. (SplinedPath)
 모든 콘 좌표에 대해 SplinedPath 기준 좌/우를 판단하여 라벨링합니다. (left_cones, right_cones)
 판단된 라벨링 데이터는 /labeled_cones 토픽의 class_names에 저장하고, 해당 좌표를 퍼블리시합니다.(pub_labeled_cones)
 '''
@@ -17,8 +17,7 @@ import numpy as np
 from collections import deque
 from typing import List, Tuple, Optional
 
-from scipy.signal import savgol_filter  # (현재 B-스플라인이 충분히 매끈하여 기본적으로 사용하지 않음)
-from scipy.interpolate import splprep, splev  # ★ 핵심: B-스플라인 스무딩
+from scipy.signal import savgol_filter
 
 import rclpy
 from rclpy.node import Node
@@ -45,7 +44,7 @@ Y_RANGE = 8.0
 Y_BACK  = 20.0
 GRID_RES = 0.5
 AMP = 1.5
-SIGMA = 1.1
+SIGMA = 0.9
 
 #----- Car Position (로컬 센서 프레임 기준) -----#
 CAR_X, CAR_Y = 0.0, 0.0
@@ -69,20 +68,18 @@ class PotentialFieldLabeler(Node):
         super().__init__('Potential_Field_Labeler')
 
         ###### (선택) 스플라인/스무딩 파라미터 선언 ######
-        # 런치에서 --ros-args -p resample_ds:=0.2 -p smooth_lambda:=0.6 -p bspline_k:=3 조정 가능
+        # 런치에서 --ros-args -p resample_ds:=0.2 -p sg_window:=9 -p sg_poly:=3 -p cr_alpha:=0.5 -p samples_per_seg:=20 조정 가능
         self.declare_parameter('resample_ds', 0.2)      # 최종 경로 점 간격[m]
-        self.declare_parameter('smooth_lambda', 0.6)    # B-스플라인 스무딩 강도(0.3~1.0 권장, 클수록 더 매끈)
-        self.declare_parameter('bspline_k', 3)          # B-스플라인 차수(k=3: cubic)
-
-        # (참고) 아래 SG는 기본적으로 사용하지 않음. 정말 필요한 경우만 약하게 사용 권장.
         self.declare_parameter('sg_window', 9)          # Savitzky–Golay 윈도(홀수)
         self.declare_parameter('sg_poly', 3)            # Savitzky–Golay 폴리 차수
+        self.declare_parameter('cr_alpha', 0.5)         # Catmull–Rom alpha(0: uniform, 0.5: centripetal, 1: chordal)
+        self.declare_parameter('samples_per_seg', 20)   # 스플라인 각 세그먼트 샘플 수(기본 20)
 
         self.resample_ds = float(self.get_parameter('resample_ds').value)
-        self.smooth_lambda = float(self.get_parameter('smooth_lambda').value)
-        self.bspline_k = int(self.get_parameter('bspline_k').value)
         self.sg_window   = int(self.get_parameter('sg_window').value)
         self.sg_poly     = int(self.get_parameter('sg_poly').value)
+        self.cr_alpha    = float(self.get_parameter('cr_alpha').value)
+        self.samples_per_seg = int(self.get_parameter('samples_per_seg').value)
 
         ###### Subscriber ######
         # ★ 토픽명 유지 (네 환경과 동일)
@@ -281,8 +278,82 @@ class PotentialFieldLabeler(Node):
         return path
 
     #=======================
-    #  B-스플라인 스무딩 + 등간격 샘플
+    #  Catmull–Rom Spline (centripetal)
     #=======================
+    @staticmethod
+    def _catmull_rom_segment(p0, p1, p2, p3, alpha, n_samples):
+        """
+        단일 세그먼트를 Catmull–Rom(centripetal) 파라미터화로 보간하여 n_samples 포인트 반환.
+        p0..p3: (x,y)
+        alpha: 0(Uniform) ~ 1(Chordal), 0.5 권장
+        """
+        p0 = np.array(p0, dtype=float); p1 = np.array(p1, dtype=float)
+        p2 = np.array(p2, dtype=float); p3 = np.array(p3, dtype=float)
+
+        def tj(ti, pi, pj):
+            dist = np.linalg.norm(pj - pi)
+            return ti + (dist ** alpha)
+
+        # 파라미터 t
+        t0 = 0.0
+        t1 = tj(t0, p0, p1)
+        t2 = tj(t1, p1, p2)
+        t3 = tj(t2, p2, p3)
+
+        # 분모 0 방지
+        if abs(t1 - t0) < 1e-6: t1 += 1e-6
+        if abs(t2 - t1) < 1e-6: t2 += 1e-6
+        if abs(t3 - t2) < 1e-6: t3 += 1e-6
+
+        ts = np.linspace(t1, t2, n_samples)
+        pts = []
+        for t in ts:
+            # 재귀적 보간(표준 공식)
+            A1 = (t1 - t)/(t1 - t0) * p0 + (t - t0)/(t1 - t0) * p1
+            A2 = (t2 - t)/(t2 - t1) * p1 + (t - t1)/(t2 - t1) * p2
+            A3 = (t3 - t)/(t3 - t2) * p2 + (t - t2)/(t3 - t2) * p3
+
+            B1 = (t2 - t)/(t2 - t0) * A1 + (t - t0)/(t2 - t0) * A2
+            B2 = (t3 - t)/(t3 - t1) * A2 + (t - t1)/(t3 - t1) * A3
+
+            C  = (t2 - t)/(t2 - t1) * B1 + (t - t1)/(t2 - t1) * B2
+            pts.append((float(C[0]), float(C[1])))
+        return pts
+
+    def _catmull_rom_spline(self, pts: List[Tuple[float,float]], alpha: float, samples_per_seg: int) -> List[Tuple[float,float]]:
+        """
+        전체 점열에 대해 Catmull–Rom(centripetal) 스플라인 곡선을 생성.
+        양 끝단은 endpoint clamping(끝점 중복)으로 처리.
+        """
+        if len(pts) < 2:
+            return pts
+        if len(pts) == 2:
+            # 직선 보간
+            p0, p1 = pts[0], pts[1]
+            ts = np.linspace(0.0, 1.0, max(2, samples_per_seg))
+            out = [(float((1-t)*p0[0] + t*p1[0]), float((1-t)*p0[1] + t*p1[1])) for t in ts]
+            return out
+
+        # 중복 제거(너무 가까운 점 제거)
+        uniq = [pts[0]]
+        for p in pts[1:]:
+            if np.hypot(p[0]-uniq[-1][0], p[1]-uniq[-1][1]) > 1e-3:
+                uniq.append(p)
+        if len(uniq) < 2:
+            return uniq
+
+        # 끝점 패딩
+        P = [uniq[0], *uniq, uniq[-1]]
+        curve = []
+        for i in range(len(P)-3):
+            seg = self._catmull_rom_segment(P[i], P[i+1], P[i+2], P[i+3], alpha, samples_per_seg)
+            if i > 0:
+                # 이음매 중복 제거
+                seg = seg[1:]
+            curve.extend(seg)
+        return curve
+
+    # ---- 호길이 등간격 재샘플 ---- #
     @staticmethod
     def _resample_by_arclength(pts: List[Tuple[float,float]], ds: float) -> List[Tuple[float,float]]:
         if not pts or len(pts) < 2:
@@ -299,52 +370,14 @@ class PotentialFieldLabeler(Node):
         y_new = np.interp(s_new, s, p[:,1])
         return list(zip(map(float, x_new), map(float, y_new)))
 
-    def _fit_bspline_smoothing(self, pts: List[Tuple[float,float]], ds: float,
-                               smooth_lambda: float = 0.6, k: int = 3) -> List[Tuple[float,float]]:
-        """
-        splprep/splev 기반 B-스플라인 스무딩. 호길이 파라미터화 후 s에 맞춰 샘플링.
-        smooth_lambda ↑ → 더 매끈(점들을 덜 집요하게 통과)
-        """
-        if len(pts) < 2:
-            return pts
-
-        P = np.array(pts, dtype=float)
-
-        # 호길이 파라미터화
-        seg = np.linalg.norm(P[1:] - P[:-1], axis=1) if len(P) > 1 else np.array([0.0])
-        s_arclen = np.concatenate([[0.0], np.cumsum(seg)])
-        L = float(s_arclen[-1])
-        if L < 1e-6:
-            return pts
-
-        # splprep 제약: k <= n-1
-        k = int(max(1, min(k, len(P) - 1)))
-
-        # 스무딩 강도 설정(데이터 규모와 목표 간격 고려)
-        s_val = float(max(1e-9, smooth_lambda * len(P) * (ds ** 2)))
-
-        try:
-            # u=s_arclen 을 직접 사용 → 곡선 길이에 따라 자연스런 파라미터
-            tck, u = splprep([P[:,0], P[:,1]], u=s_arclen, s=s_val, k=k, per=False)
-        except Exception:
-            # 데이터가 빡빡하면 차수 낮춰 재시도
-            k = int(max(1, min(2, len(P) - 1)))
-            tck, u = splprep([P[:,0], P[:,1]], u=s_arclen, s=s_val, k=k, per=False)
-
-        # 등간격 샘플
-        n = max(2, int(L / ds) + 1)
-        u_new = np.linspace(s_arclen[0], s_arclen[-1], n)
-        x_new, y_new = splev(u_new, tck)
-
-        return list(zip(map(float, x_new), map(float, y_new)))
-
+    # ---- Savitzky–Golay 스무딩 ---- #
     @staticmethod
     def _savgol(pts: List[Tuple[float,float]], window: int, poly: int) -> List[Tuple[float,float]]:
-        # (선택) B-스플라인으로 충분히 매끈하면 보통 불필요. 정말 필요할 때만 아주 약하게.
         if not pts:
             return pts
         x = np.array([p[0] for p in pts], dtype=float)
         y = np.array([p[1] for p in pts], dtype=float)
+        # 윈도: 홀수, 길이 이하
         w = window if window % 2 == 1 else window + 1
         max_w = len(x) if len(x) % 2 == 1 else len(x) - 1
         if max_w < 3:
@@ -356,25 +389,24 @@ class PotentialFieldLabeler(Node):
         y_s = savgol_filter(y, window_length=w, polyorder=poly, mode='interp')
         return list(zip(map(float, x_s), map(float, y_s)))
 
+    # ---- 스플라이닝 파이프라인 ---- #
     def splining(self, path: List[Tuple[float, float]]) -> List[Tuple[float, float]]:
         if not path:
             return []
 
-        # 전방 포인트만 남기고
-        path = self._filter_ahead(path)
-        if not path:
+        # 1) Catmull–Rom(centripetal) 스플라인(포인트 통과, 오버슈트 적음)
+        cr_curve = self._catmull_rom_spline(path, alpha=self.cr_alpha, samples_per_seg=self.samples_per_seg)
+
+        # 2) 전방 후처리(뒤쪽 제거)
+        cr_curve = self._filter_ahead(cr_curve)
+        if not cr_curve:
             return []
 
-        # B-스플라인 스무딩 + 등간격 샘플
-        curve = self._fit_bspline_smoothing(
-            path,
-            ds=self.resample_ds,
-            smooth_lambda=self.smooth_lambda,
-            k=self.bspline_k
-        )
+        # 3) 호길이 등간격 재샘플
+        curve = self._resample_by_arclength(cr_curve, self.resample_ds)
 
-        # 필요시 아주 약한 SG 한 번(기본적으로 비권장)
-        # curve = self._savgol(curve, max(5, self.sg_window//2*2+1), max(2, min(3, self.sg_poly)))
+        # 4) Savitzky–Golay 스무딩(곡률 보존하면서 노이즈 완화)
+        curve = self._savgol(curve, self.sg_window, self.sg_poly)
 
         return curve
 
@@ -604,7 +636,7 @@ class PotentialFieldLabeler(Node):
     def main_loop(self):
         '''
         1) 콘 좌표 수집 → 2) Potential Field → 3) Trough 탐색
-        4) 전방 필터 + 근접 연결 → 5) B-스플라인 스무딩(+등간격샘플)
+        4) 전방 필터 + 근접 연결 → 5) Catmull–Rom 스플라인(+재샘플/스무딩)
         6) 경로 기준 좌/우 라벨링 → 7) 퍼블리시/시각화
         '''
         if len(self.cone_data) < 3:
@@ -621,7 +653,7 @@ class PotentialFieldLabeler(Node):
         AheadTroughs = self._filter_ahead(TroughPoints)
         ValidPath = self.validation_filter(AheadTroughs)
 
-        # 4) 스플라인 + 후처리(B-스플라인 스무딩)
+        # 4) 스플라인 + 후처리
         SplinedPath = self.splining(ValidPath)
 
         # 5) 좌/우 라벨링
@@ -658,7 +690,7 @@ class PotentialFieldLabeler(Node):
 def main(args=None):
     rclpy.init(args=args)
     node = PotentialFieldLabeler()
-    node.get_logger().info('Potential Field Labeler Started (B-spline smoothing + resample)')
+    node.get_logger().info('Potential Field Labeler Started (Catmull–Rom + resample + SG)')
     try:
         rclpy.spin(node)
     except KeyboardInterrupt:
