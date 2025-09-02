@@ -9,6 +9,8 @@ find_package(rclcpp REQUIRED)
 find_package(std_msgs REQUIRED)
 find_package(nav_msgs REQUIRED)
 find_package(geometry_msgs REQUIRED)
+find_package(visualization_msgs REQUIRED)
+
 
 # [추가] Matplot++는 선택사항 (없으면 CSV만 출력)
 find_package(Matplot++ QUIET)
@@ -33,10 +35,19 @@ if(Matplot++_FOUND)
   target_compile_definitions(simple_speed_planner_debug PRIVATE HAVE_MATPLOT=1)
 endif()
 
+add_executable(curvature_speed_planner_node src/curvature_speed_planner_node.cpp)
+ament_target_dependencies(curvature_speed_planner_node
+  rclcpp
+  nav_msgs
+  std_msgs
+  visualization_msgs
+)
+
 install(TARGETS
   simple_speed_planner
   stcap_fb_speed_planner
-  simple_speed_planner_debug   # [추가]
+  simple_speed_planner_debug
+  curvature_speed_planner_node
   DESTINATION lib/${PROJECT_NAME}
 )
 
