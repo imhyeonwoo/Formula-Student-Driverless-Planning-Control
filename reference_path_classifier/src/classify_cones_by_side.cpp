@@ -53,8 +53,8 @@ public:
         "/cone/lidar", 10,
         std::bind(&ConeSideClassifier::cbCones, this, _1));
 
-    pub_left_  = create_publisher<Marker>("/left_cone_marker",  1);
-    pub_right_ = create_publisher<Marker>("/right_cone_marker", 1);
+    pub_left_  = create_publisher<Marker>("/left_cone_marker/real",  1);
+    pub_right_ = create_publisher<Marker>("/right_cone_marker/real", 1);
 
     RCLCPP_INFO(get_logger(), "ConeSideClassifier (KD-Tree, TrackedConeArray@/cone/lidar) started");
   }

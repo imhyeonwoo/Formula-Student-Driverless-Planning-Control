@@ -65,4 +65,27 @@ target_link_libraries(classify_cones_by_side OpenMP::OpenMP_CXX)
 
 install(TARGETS classify_cones_by_side DESTINATION lib/${PROJECT_NAME})
 
+
+# ★★★ 새로 추가: virtual_cone_densifier ★★★
+add_executable(virtual_cone_densifier src/virtual_cone_densifier.cpp)
+
+target_include_directories(virtual_cone_densifier PUBLIC
+  ${EIGEN3_INCLUDE_DIRS}
+  ${NANOFLANN_INCLUDE_DIR})
+
+ament_target_dependencies(virtual_cone_densifier
+  rclcpp geometry_msgs visualization_msgs Eigen3)
+
+target_link_libraries(virtual_cone_densifier OpenMP::OpenMP_CXX)
+
+install(TARGETS virtual_cone_densifier DESTINATION lib/${PROJECT_NAME})
+
+
+# ★★★ 새로 추가: cone_marker_merger ★★★
+add_executable(cone_marker_merger src/cone_marker_merger.cpp)
+ament_target_dependencies(cone_marker_merger
+  rclcpp visualization_msgs geometry_msgs)
+install(TARGETS cone_marker_merger DESTINATION lib/${PROJECT_NAME})
+
+
 ament_package()
