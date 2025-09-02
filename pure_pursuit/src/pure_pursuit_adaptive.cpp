@@ -259,7 +259,7 @@ private:
       pl = { pd.x + outward.x * off, pd.y + outward.y * off };
     }
 
-    // ★ 추가: 실제 룩어헤드 거리(원점→pd)
+    // ★ 추가: 실제 룩어헤드 거리(원점→pl)
     const double Ld_actual = std::hypot(pl.x, pl.y);
 
     // ★ 추가: Ld(스케줄) & Ld_actual 퍼블리시
