@@ -1,0 +1,27 @@
+wheel_trajectory:
+  ros__parameters:
+    # 모델/차량
+    wheel_base: 1.3            # [m]
+    mode: "predict"            # "predict" or "measure"
+    steer_limit_deg: 30.0      # [deg] clamp
+    steer_lpf_tau: 0.10        # [s] 1차 LPF (0이면 비활성)
+    v_min: 0.03                # [m/s] 저속 가드
+    rate_hz: 50.0
+    omega_eps: 1.0e-6
+
+    # 프레임/토픽
+    frame_map: "map"
+    frame_base: "base_link"
+    topic_speed: "/current_speed"                 # std_msgs/Float32 (m/s)
+    topic_steer: "/cmd/steer"                     # std_msgs/Float32 (deg, 좌+, 우-)
+    topic_global_yaw: "/global_yaw/complementary" # std_msgs/Float32 (rad) - measure 모드에서 사용
+
+    # 경로 관리
+    path_topic: "/wheel_path"
+    min_dist: 0.05         # [m] 점 추가 임계
+    min_yaw_deg: 0.5       # [deg]
+    max_points: 3000
+
+    # 시각화 Odometry 퍼블리시(디버그)
+    publish_vis_odom: true
+    vis_odom_topic: "/wheel_odom_vis"
