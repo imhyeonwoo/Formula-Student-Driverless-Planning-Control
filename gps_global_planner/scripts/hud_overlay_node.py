@@ -132,8 +132,8 @@ class HudOverlayNode(Node):
         text.bg_color.a = 0.35
 
         if self.gps_cov_ok:
-            gps_line1 = f"Pose error E/N: {self.gps_sigma_e:.3f} / {self.gps_sigma_n:.3f} m"
-            gps_line2 = f"Pose error H  : {self.gps_drms:.3f} m (DRMS)"
+            gps_line1 = f"Pose error E/N: {self.gps_sigma_e * 100:.2f} / {self.gps_sigma_n * 100:.2f} cm"
+            gps_line2 = f"Pose error H  : {self.gps_drms * 100:.1f} cm (DRMS)"
         else:
             gps_line1 = "Pose error E/N: N/A"
             gps_line2 = "Pose error H  : N/A"
