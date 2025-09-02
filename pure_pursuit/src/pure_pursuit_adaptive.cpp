@@ -210,16 +210,16 @@ private:
     const int idx_pw = indexAtS(prj.s_proj);
     const int idx_pd = indexAtS(s_target);
 
-    // ★ 추가: 실제 룩어헤드 거리(원점→pd)
-    const double Ld_actual = std::hypot(pd.x, pd.y);
+    // // ★ 추가: 실제 룩어헤드 거리(원점→pd)
+    // const double Ld_actual = std::hypot(pd.x, pd.y);
 
-    // ★ 추가: Ld(스케줄) & Ld_actual 퍼블리시
-    {
-      std_msgs::msg::Float32 m1; m1.data = static_cast<float>(Ld);
-      std_msgs::msg::Float32 m2; m2.data = static_cast<float>(Ld_actual);
-      pub_Ld_sched_->publish(m1);
-      pub_Ld_actual_->publish(m2);
-    }
+    // // ★ 추가: Ld(스케줄) & Ld_actual 퍼블리시
+    // {
+    //   std_msgs::msg::Float32 m1; m1.data = static_cast<float>(Ld);
+    //   std_msgs::msg::Float32 m2; m2.data = static_cast<float>(Ld_actual);
+    //   pub_Ld_sched_->publish(m1);
+    //   pub_Ld_actual_->publish(m2);
+    // }
 
     // (D) pw = base_link 원점, pl = pd에서 바깥 오프셋 적용
     Pt pw{0.0, 0.0};
@@ -257,6 +257,17 @@ private:
       }
 
       pl = { pd.x + outward.x * off, pd.y + outward.y * off };
+    }
+
+    // ★ 추가: 실제 룩어헤드 거리(원점→pd)
+    const double Ld_actual = std::hypot(pl.x, pl.y);
+
+    // ★ 추가: Ld(스케줄) & Ld_actual 퍼블리시
+    {
+      std_msgs::msg::Float32 m1; m1.data = static_cast<float>(Ld);
+      std_msgs::msg::Float32 m2; m2.data = static_cast<float>(Ld_actual);
+      pub_Ld_sched_->publish(m1);
+      pub_Ld_actual_->publish(m2);
     }
 
     // (E) pl 좌표 EMA(타깃 스무딩)

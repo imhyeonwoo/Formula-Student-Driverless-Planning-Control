@@ -5,7 +5,8 @@ import os
 
 def generate_launch_description():
     pkg_share = get_package_share_directory('pure_pursuit')
-    param_file = os.path.join(pkg_share, 'config', 'adaptive_pp.yaml')
+    # param_file = os.path.join(pkg_share, 'config', 'adaptive_pp.yaml')
+    param_file = os.path.join(pkg_share, 'config', 'ad_test1.yaml')
 
     return LaunchDescription([
         Node(

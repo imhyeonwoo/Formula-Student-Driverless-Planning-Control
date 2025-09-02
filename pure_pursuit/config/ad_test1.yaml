@@ -3,28 +3,26 @@ pure_pursuit_adaptive:
     # I/O
     path_topic: "/local_planned_path"
     speed_topic: "/current_speed"
-    # GPS-IMU Fusion으로 구한 속도 : /current_speed/odom
-    # 하드웨어 제어에서 발행하는 모터 속도 : /ctrl/speed
     steer_topic: "/cmd/steer"
     debug_marker_topic: "/pure_pursuit/debug_markers"
-    base_frame: "base_link"   # 내부 계산은 모두 base_link 기준. Path가 다른 frame이면 TF로 변환.
+    base_frame: "base_link"
 
     # Vehicle
     wheelbase_m: 1.3
 
-    # LAD scheduling
+    # LAD scheduling  (Option A: curvature term scaled down, less saturation)
     use_speed_term: true
-    L0: 3.8
-    k_v: 0.20
+    L0: 3.8                # base lookahead
+    k_v: 0.20              # speed gain
     use_curvature_term: true
-    k_curv: 0.05
-    epsilon_kappa: 0.02
-    Ld_min: 4.2
-    Ld_max: 5.5
+    k_curv: 0.05           # ↓ smaller curvature boost (was 0.2)
+    epsilon_kappa: 0.02    # ↑ avoid huge boost on near-straight
+    Ld_min: 4.5            # curve floor (static 4.2에서 커브가 좋았다 → 약간만 상향)
+    Ld_max: 5.5            # straight ceiling (직선 오실레이션 완화 목적)
 
     # Target selection
     use_arc_length_selection: true
-    x_forward_only: true      # (참고) 이제 s-기반 선택이라 영향은 적지만 유지
+    x_forward_only: true
     forward_margin_x: -0.2
 
     # Outer-offset (pd -> pl)
@@ -35,8 +33,8 @@ pure_pursuit_adaptive:
     outer_offset_max_m: 1.0
     outer_offset_tau_max: 0.7
     outer_offset_kappa_gate: 0.03
-    track_half_width_m: 2.5   # 트랙 폭의 절반
-    track_margin_m: 0.2       # 차량이 트랙 경계에 너무 가까이 가지 않도록 마진
+    track_half_width_m: 2.5
+    track_margin_m: 0.2
 
     # Command shaping
     publish_rate_hz: 50.0
@@ -45,17 +43,17 @@ pure_pursuit_adaptive:
     ema_tau_cmd: 0.12
     ema_tau_speed: 0.8
 
-    # Noise suppression (new)
+    # Noise suppression
     sticky_window_pts: 15
-    kappa_smooth_window_pts: 7
-    target_ema_tau: 0.08
+    kappa_smooth_window_pts: 9   # ↑ 더 완만한 Ld 스케줄
+    target_ema_tau: 0.10         # ↑ 타깃(PL) 스무딩 강화
 
     # RViz2 debug
     show_lookahead_circle: true
     show_points: true
     show_tangent: true
     show_offset_vec: true
-    show_selected_path: false
+    show_selected_path: true     # ← s-구간 하이라이트로 진단 편의
     show_steer_arrow: true
     show_steer_text: false
     marker_alpha: 1.0
