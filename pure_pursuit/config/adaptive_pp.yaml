@@ -4,7 +4,7 @@ pure_pursuit_adaptive:
     path_topic: "/local_planned_path"
     speed_topic: "/current_speed"
     # GPS-IMU Fusion으로 구한 속도 : /current_speed/odom
-    # 하드웨어 제어에서 발행하는 모터 속도 : /current_speed/motor
+    # 하드웨어 제어에서 발행하는 모터 속도 : /ctrl/speed
     steer_topic: "/cmd/steer"
     debug_marker_topic: "/pure_pursuit/debug_markers"
     base_frame: "base_link"   # 내부 계산은 모두 base_link 기준. Path가 다른 frame이면 TF로 변환.
@@ -14,13 +14,13 @@ pure_pursuit_adaptive:
 
     # LAD scheduling
     use_speed_term: true
-    L0: 2.5
-    k_v: 0.6
+    L0: 3.5
+    k_v: 0.25
     use_curvature_term: true
-    k_curv: 0.0
-    epsilon_kappa: 1.0e-6
-    Ld_min: 1.0
-    Ld_max: 6.0
+    k_curv: 0.2
+    epsilon_kappa: 0.005
+    Ld_min: 3.7
+    Ld_max: 4.5
 
     # Target selection
     use_arc_length_selection: true
@@ -43,11 +43,11 @@ pure_pursuit_adaptive:
     steer_limit_deg: 30.0
     steer_rate_limit_deg_per_s: 360.0
     ema_tau_cmd: 0.12
-    ema_tau_speed: 0.20
+    ema_tau_speed: 0.8
 
     # Noise suppression (new)
     sticky_window_pts: 15
-    kappa_smooth_window_pts: 3
+    kappa_smooth_window_pts: 7
     target_ema_tau: 0.08
 
     # RViz2 debug
