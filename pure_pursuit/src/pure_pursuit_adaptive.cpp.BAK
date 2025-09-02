@@ -1,7 +1,5 @@
-// src/Planning/pure_pursuit/src/pure_pursuit_adaptive.cpp
 #include <rclcpp/rclcpp.hpp>
 #include <std_msgs/msg/float32.hpp>
-#include <std_msgs/msg/color_rgba.hpp>
 #include <nav_msgs/msg/path.hpp>
 #include <visualization_msgs/msg/marker.hpp>
 #include <visualization_msgs/msg/marker_array.hpp>
@@ -105,10 +103,6 @@ public:
     pub_steer_ = create_publisher<std_msgs::msg::Float32>(steer_topic_, 10);
     pub_debug_ = create_publisher<visualization_msgs::msg::MarkerArray>(debug_topic_, 10);
 
-    // ★ 추가: Ld(스케줄) & Ld_actual(원점→pd 실제 거리) 퍼블리셔
-    pub_Ld_sched_  = create_publisher<std_msgs::msg::Float32>("/pure_pursuit/lookahead_scheduled", 10);
-    pub_Ld_actual_ = create_publisher<std_msgs::msg::Float32>("/pure_pursuit/lookahead_actual", 10);
-
     // ----- Timer -----
     using namespace std::chrono_literals;
     const auto period = std::chrono::duration<double>(1.0 / std::max(1e-3, publish_rate_hz_));
@@ -210,17 +204,6 @@ private:
     const int idx_pw = indexAtS(prj.s_proj);
     const int idx_pd = indexAtS(s_target);
 
-    // ★ 추가: 실제 룩어헤드 거리(원점→pd)
-    const double Ld_actual = std::hypot(pd.x, pd.y);
-
-    // ★ 추가: Ld(스케줄) & Ld_actual 퍼블리시
-    {
-      std_msgs::msg::Float32 m1; m1.data = static_cast<float>(Ld);
-      std_msgs::msg::Float32 m2; m2.data = static_cast<float>(Ld_actual);
-      pub_Ld_sched_->publish(m1);
-      pub_Ld_actual_->publish(m2);
-    }
-
     // (D) pw = base_link 원점, pl = pd에서 바깥 오프셋 적용
     Pt pw{0.0, 0.0};
     Pt pl = pd;
@@ -284,7 +267,7 @@ private:
 
     // (H) Publish
     publishSteerDeg(cmd_deg);
-    publishDebugMarkers(Ld, Ld_actual, pw, pd, pl, idx_pw, idx_pd, cmd_deg);
+    publishDebugMarkers(Ld, pw, pd, pl, idx_pw, idx_pd, cmd_deg);
 
     // (I) 스티키 인덱스 갱신
     idx_pw_prev_ = idx_pw;
@@ -495,9 +478,8 @@ private:
     return a;
   }
 
-  void publishDebugMarkers(double Ld, double Ld_actual, const Pt& pw, const Pt& pd, const Pt& pl,
+  void publishDebugMarkers(double Ld, const Pt& pw, const Pt& pd, const Pt& pl,
                            int idx_pw, int idx_pd, double cmd_deg) {
-    (void)Ld; // 현재 시각화는 Ld(스케줄)를 원에 쓰지 않음
     visualization_msgs::msg::MarkerArray arr;
     const rclcpp::Time tnow = this->now_();
     auto make_color = [&](const std::array<double,3>& c, double a){
@@ -505,25 +487,21 @@ private:
     };
     const std::string frame = frame_id_from_path_.empty()? base_frame_ : frame_id_from_path_;
 
-    // 0) Look-ahead circle: 실제 거리(원점→pd)만 표시
+    // 0) Look-ahead circle
     if (show_lookahead_circle_) {
-      const int N = std::max(16, circle_pts_);
       visualization_msgs::msg::Marker cir;
       cir.header.frame_id = frame; cir.header.stamp = tnow;
-      cir.ns = "pp/lookahead_circle_actual";  // actual로 명시
-      cir.id = 0;
+      cir.ns = "pp/lookahead_circle"; cir.id = 0;
       cir.type = visualization_msgs::msg::Marker::LINE_STRIP;
       cir.action = visualization_msgs::msg::Marker::ADD;
-      cir.scale.x = 0.03;                     // 약간 굵게
-      cir.color = make_color(color_pl_, 0.9); // 보라색 계열, 진하게
+      cir.scale.x = 0.02;
+      cir.color = make_color(color_cir_, 0.6);
       cir.pose.orientation.w = 1.0;
+      const int N = std::max(16, circle_pts_);
       cir.points.resize(N+1);
       for (int i=0;i<=N;++i){
         const double th = (2.0*kPi*i)/N;
-        geometry_msgs::msg::Point p; 
-        p.x = Ld_actual * std::cos(th);
-        p.y = Ld_actual * std::sin(th);
-        p.z = 0.02;
+        geometry_msgs::msg::Point p; p.x = Ld*std::cos(th); p.y = Ld*std::sin(th); p.z = 0.02;
         cir.points[i] = p;
       }
       arr.markers.push_back(cir);
@@ -676,11 +654,6 @@ private:
   rclcpp::Subscription<std_msgs::msg::Float32>::SharedPtr sub_speed_;
   rclcpp::Publisher<std_msgs::msg::Float32>::SharedPtr pub_steer_;
   rclcpp::Publisher<visualization_msgs::msg::MarkerArray>::SharedPtr pub_debug_;
-
-  // ★ 추가: Ld 모니터 퍼블리셔
-  rclcpp::Publisher<std_msgs::msg::Float32>::SharedPtr pub_Ld_sched_;
-  rclcpp::Publisher<std_msgs::msg::Float32>::SharedPtr pub_Ld_actual_;
-
   rclcpp::TimerBase::SharedPtr timer_;
 
   nav_msgs::msg::Path last_path_;
