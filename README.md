@@ -84,7 +84,7 @@ Planning/
 ---
 
 ## Usage
-- Refer to How To Play.txt
+- Refer to How To Play.md
 
 ### Build (ROS2 Humble)
 
