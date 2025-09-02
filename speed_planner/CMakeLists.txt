@@ -11,7 +11,6 @@ find_package(nav_msgs REQUIRED)
 find_package(geometry_msgs REQUIRED)
 find_package(visualization_msgs REQUIRED)
 
-
 # [추가] Matplot++는 선택사항 (없으면 CSV만 출력)
 find_package(Matplot++ QUIET)
 
