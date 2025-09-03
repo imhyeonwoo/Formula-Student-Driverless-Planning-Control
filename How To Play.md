@@ -64,9 +64,9 @@
  - Potential Filed -> Field 내 Trough(골) Point 탐색 -> 거리 기반 필터링 -> Spline -> (Labeling) -> Path Planning 
  
 
- ## 4-2. Local Path Planning by YB
+ ## 4-2. Local Path Planning by HSM
  ```bash
-  fill in here
+  ros2 run cone_labeling_hsm path_planning
  ```
 
 ---
