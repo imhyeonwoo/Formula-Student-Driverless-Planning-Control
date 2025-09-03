@@ -20,7 +20,7 @@
 #include <vector>
 #include <limits>
 
-constexpr double N_MAX = 5.0;   // lateral 한계 [m]
+constexpr double N_MAX = 6.0;   // lateral 한계 [m]
 
 #ifdef _OPENMP
   #include <omp.h>
