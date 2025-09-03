@@ -9,7 +9,8 @@ reference_path_planning.py  (anchored & forward-stable)
    → base_link (0,0) 앵커에서 시작하는 고정 길이 경로 생성
 • /local_planned_path(nav_msgs/Path) + 디버그 마커 퍼블리시
 • /desired_speed_profile 길이 불일치 허용 반영
-(2025-09-02  - base_link 앵커/전방성/고정 길이/단측 fallback 추가)
+• (2025-09-03) anchored 출력에 지수평활(EMA) 적용 옵션 추가 → LAD 노이즈 완화
+  - 동일 길이/등간격 특성을 이용해 프레임간 index-wise 블렌딩
 """
 
 from typing import List, Tuple, Optional
@@ -95,12 +96,20 @@ class ReferencePathPlanner(Node):
         self.bridge_step    = 0.6   # 브리징 보강 간격
 
         # 스플라인 스무딩(길이 비례, 0~0.05 권장)
-        self.smooth_coef    = 0.02
+        # 약하게(0.02) → 0.05로 상향하여 미세 요동 완화
+        self.smooth_coef    = 0.05
 
         # 단측 fallback (폭 추정)
         self.half_width_est = 2.5   # 없으면 기본값
         self.half_width_min = 1.0
         self.half_width_max = 4.0
+
+        # ── Temporal EMA(출력 앵커드 경로 안정화) -----------------
+        # index-wise EMA를 적용하여 프레임간 미세 흔들림을 감쇠
+        # alpha가 클수록 과거 경로를 더 신뢰(0.7~0.85 권장)
+        self.enable_temporal_ema = True
+        self.temporal_alpha = 0.85
+        self._prev_anchored: Optional[np.ndarray] = None
 
     # ==========================================================
     # Marker 콜백
@@ -214,6 +223,41 @@ class ReferencePathPlanner(Node):
             x = np.interp(ss, s, mids[:, 0])
             y = np.interp(ss, s, mids[:, 1])
             return np.column_stack([x, y]).astype(float)
+
+    # ── polyline 등간격 리샘플러(목표 개수) ───────────────────────
+    def _resample_polyline_n(self, P: np.ndarray, n: int) -> np.ndarray:
+        if P is None or len(P) == 0 or n <= 0:
+            return np.zeros((0, 2), float)
+        if len(P) == 1 or n == 1:
+            return np.array([P[0]], float)
+        seg = np.linalg.norm(np.diff(P, axis=0), axis=1)
+        s = np.concatenate([[0.0], np.cumsum(seg)])
+        L = float(s[-1])
+        if L < 1e-9:
+            return np.tile(P[0], (n, 1)).reshape(n, 2)
+        tgt = np.linspace(0.0, L, n)
+        Xs = np.interp(tgt, s, P[:, 0])
+        Ys = np.interp(tgt, s, P[:, 1])
+        return np.column_stack([Xs, Ys])
+
+    # ── anchored 출력 지수평활(EMA) ───────────────────────────────
+    def _temporal_smooth(self, curr: np.ndarray) -> np.ndarray:
+        if not self.enable_temporal_ema:
+            self._prev_anchored = curr.copy()
+            return curr
+        if self._prev_anchored is None or len(self._prev_anchored) == 0:
+            self._prev_anchored = curr.copy()
+            return curr
+        # 길이 불일치 시 이전 경로를 현재 개수에 맞춰 리샘플
+        prev = self._resample_polyline_n(self._prev_anchored, len(curr))
+        a = float(max(0.0, min(0.999, self.temporal_alpha)))
+        out = a * prev + (1.0 - a) * curr
+        # (0,0) 앵커 고정 보장
+        if len(out) >= 1:
+            out[0, 0] = 0.0
+            out[0, 1] = 0.0
+        self._prev_anchored = out.copy()
+        return out
 
     # ── 전방성/원점 뒤쪽 제거 + 0-length 제거 ───────────────
     def _forward_sanitize(self, P: np.ndarray) -> np.ndarray:
@@ -427,6 +471,9 @@ class ReferencePathPlanner(Node):
         anchored = self._anchor_fixed_length(center_dense)
         if len(anchored) < 2:
             return
+
+        # Temporal EMA로 앵커드 경로 안정화
+        anchored = self._temporal_smooth(anchored)
 
         # Waypoints 생성(등간격 보장)
         wps = [Waypoint(float(x), float(y), self.default_speed) for x, y in anchored]
