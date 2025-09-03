@@ -4,138 +4,157 @@
 '''
 본 스크립트는 좌우 라벨링이 되지 않은 콘 데이터를 이용하여 Potential Field를 형성합니다. (PotentialField)
 형성된 Potential Field의 Trough(골)을 필드 영역 전체에 대해 연산하여 저장합니다. (TroughPoints)
-산출된 Trough(골) 좌표에서, 차량(0,0)과 가장 가까운 좌표를 시작으로,
+산출된 Trough(골) 좌표에서, 차량(0,0)과 가장 가까운 좌표를 시작으로, 
 임계값(DIST_THRESH) 이하이면서 가장 가까운 좌표만 필터링하여 저장합니다. (ValidPath)
-유효한 Trough(골) 좌표를 대상으로 **B-스플라인 스무딩(splprep/splev)** 을 적용하고,
-호길이 등간격 재샘플로 최종 경로를 부드럽게 만듭니다. (SplinedPath)
-모든 콘 좌표에 대해 SplinedPath 기준 좌/우를 판단하여 라벨링합니다. (left_cones, right_cones)
-판단된 라벨링 데이터는 /labeled_cones 토픽의 class_names에 저장하고, 해당 좌표를 퍼블리시합니다.(pub_labeled_cones)
+유효한 Trough(골) 좌표를 대상으로 B-Spline을 진행합니다. (SplinedPath)
+모든 콘 좌표에 대해 SplinedPath 상의 최단거리 좌표까지의 직선(벡터)과, 해당 좌표에서의 접선(벡터)을 내적하여
+SplinedPath 기준의 좌,우를 판단합니다. (left_cones, right_cones)
+판단된 라벨링 데이터는 /labeled_cones 토픽의 class_names에 저장하고, 해당하는 좌표를 퍼블리시합니다.(pub_labeled_cones)
 '''
 
-import math
-import numpy as np
-from collections import deque
-from typing import List, Tuple, Optional
-
-from scipy.signal import savgol_filter  # (현재 B-스플라인이 충분히 매끈하여 기본적으로 사용하지 않음)
-from scipy.interpolate import splprep, splev  # ★ 핵심: B-스플라인 스무딩
+'''''''''
+주요 라이브러리 Import
+'''''''''
 
 import rclpy
 from rclpy.node import Node
-from rclpy.qos import QoSProfile, ReliabilityPolicy
 from rclpy.time import Time
-
 from visualization_msgs.msg import Marker
 from custom_interface.msg import TrackedConeArray, ModifiedFloat32MultiArray
-from geometry_msgs.msg import Point, PoseStamped
+from geometry_msgs.msg import Point, PoseStamped, TransformStamped
+from tf2_ros import Buffer, TransformListener
 from nav_msgs.msg import Path
 from std_msgs.msg import ColorRGBA, UInt8
+from collections import deque
+import math
+from math import hypot
+import numpy as np
+from typing import List, Tuple, Optional
+from scipy.signal import savgol_filter
+from scipy.interpolate import splprep, splev
 
-# tf2 (프레임 일치용)
-from tf2_ros import Buffer, TransformListener
-from geometry_msgs.msg import TransformStamped
-
+from rclpy.qos import QoSProfile, ReliabilityPolicy
 qos = QoSProfile(depth=10)
 qos.reliability = ReliabilityPolicy.BEST_EFFORT
 
-# =================== 전역 파라미터 =================== #
-#----- Potential Field -----#
-X_RANGE = 30.0
-Y_RANGE = 8.0
-Y_BACK  = 20.0
-GRID_RES = 0.5
-AMP = 1.5
-SIGMA = 1.1
+'''''''''
+전역변수 선언
+'''''''''
 
-#----- Car Position (로컬 센서 프레임 기준) -----#
-CAR_X, CAR_Y = 0.0, 0.0
+#----- Potential Field -----#
+GRID_FORWARD = 10.0             #필드 형성
+GRID_BACK = 5.0
+GRID_LEFTRIGHT = 8.0
+GRID_RES = 0.1                  #그리드 단위
+AMP = 1.5                       #가우시안 필터 최댓값
+SIGMA = 1.2                     #표준편차
+
+#----- Car Position -----#
+CAR_X, CAR_Y = 0,0
 
 #----- Path -----#
-DIST_THRESH = 2.0
-FRAME_BUFFER = 3
+DIST_THRESH = 2.0           #유효값 산출을 위한 좌표간 최대 거리 제한
+FRAME_BUFFER = 1            #연산 대상 프레임 누적 개수
+PATH_FORWARD = -0.05        #거리 전방 필터링
+PATH_START_THRESH = 3.0     #시작거리 제한
 
 #----- AEB -----#
-AEB_TRHESH = 7
-AEB_HOR = 6.0
-AEB_VER = 8.0
+AEB_TRHESH = 8
+AEB_HOR = 6.0               #AEB 가로구간
+AEB_VER = 8.0               #AEB 세로구간
 
-#----- Forward 판단 임계 -----#
-FORWARD_DOT_EPS = -0.05  # 음수 약간 허용(너무 보수적이면 경로가 끊길 수 있음)
-
-#=====================================================#
-
+'''
+Ros2 Node 생성
+'''
 class PotentialFieldLabeler(Node):
     def __init__(self):
         super().__init__('Potential_Field_Labeler')
 
         ###### (선택) 스플라인/스무딩 파라미터 선언 ######
-        # 런치에서 --ros-args -p resample_ds:=0.2 -p smooth_lambda:=0.6 -p bspline_k:=3 조정 가능
+        # 런치에서 --ros-args -p resample_ds:=0.2 -p sg_window:=9 -p sg_poly:=3 -p cr_alpha:=0.5 -p samples_per_seg:=20 조정 가능
         self.declare_parameter('resample_ds', 0.2)      # 최종 경로 점 간격[m]
-        self.declare_parameter('smooth_lambda', 0.6)    # B-스플라인 스무딩 강도(0.3~1.0 권장, 클수록 더 매끈)
-        self.declare_parameter('bspline_k', 3)          # B-스플라인 차수(k=3: cubic)
-
-        # (참고) 아래 SG는 기본적으로 사용하지 않음. 정말 필요한 경우만 약하게 사용 권장.
         self.declare_parameter('sg_window', 9)          # Savitzky–Golay 윈도(홀수)
         self.declare_parameter('sg_poly', 3)            # Savitzky–Golay 폴리 차수
+        self.declare_parameter('cr_alpha', 0.7)         # Catmull–Rom alpha(0: uniform, 0.5: centripetal, 1: chordal)
+        self.declare_parameter('samples_per_seg', 20)   # 스플라인 각 세그먼트 샘플 수(기본 20)
+        
+        ##### 필드 관련 파라미터 #####
+        self.declare_parameter('GRID_Forward', GRID_FORWARD)      
+        self.GRID_FORWARD = float(self.get_parameter('GRID_Forward').value)
+        self.declare_parameter('GRID_Back', -8.0)         
+        self.GRID_BACK = float(self.get_parameter('GRID_Back').value)
+        self.declare_parameter('GRID_LeftRight', 10.0)    
+        self.GRID_LEFTRIGHT = float(self.get_parameter('GRID_LeftRight').value)
+        self.declare_parameter('FIELD_SIGMA', 1.0)    
+        self.FIELD_SIGMA = float(self.get_parameter('FIELD_SIGMA').value)
 
         self.resample_ds = float(self.get_parameter('resample_ds').value)
-        self.smooth_lambda = float(self.get_parameter('smooth_lambda').value)
-        self.bspline_k = int(self.get_parameter('bspline_k').value)
         self.sg_window   = int(self.get_parameter('sg_window').value)
         self.sg_poly     = int(self.get_parameter('sg_poly').value)
+        self.cr_alpha    = float(self.get_parameter('cr_alpha').value)
+        self.samples_per_seg = int(self.get_parameter('samples_per_seg').value)
 
         ###### Subscriber ######
-        # ★ 토픽명 유지 (네 환경과 동일)
+        # ----- Data -----#
         self.unknown_sub = self.create_subscription(
-            TrackedConeArray, '/cone/lidar/ukf', self.cones_callback, qos)
+            TrackedConeArray,
+            '/cone/lidar/ukf',
+            self.cones_callback,
+            qos)
+        
         self.red_sub = self.create_subscription(
-            TrackedConeArray, '/cone/fused/ukf', self.red_callback, qos)
-
+            TrackedConeArray,
+            '/cone/fused/ukf',
+            self.red_callback,
+            qos)
+        
         ###### Publisher ######
         self.pub_labeled_cones = self.create_publisher(ModifiedFloat32MultiArray, '/labeled_cones', 10)
-        self.leftcone_pub  = self.create_publisher(Marker, '/left_cone_marker', 10)
+        self.leftcone_pub = self.create_publisher(Marker, '/left_cone_marker', 10)
         self.rightcone_pub = self.create_publisher(Marker, '/right_cone_marker', 10)
-        self.aeb_pub       = self.create_publisher(UInt8, '/estop', 10)
+        self.aeb_pub = self.create_publisher(UInt8, '/estop', 10)
 
-        # ----- Visualize -----#
-        self.field_pub         = self.create_publisher(Marker, '/potential_field', 10)
-        self.trough_pub        = self.create_publisher(Marker, '/trough_marker', 10)
-        self.valid_trough_pub  = self.create_publisher(Marker, '/valid_trough_marker', 10)
-        self.carpos_pub        = self.create_publisher(Marker, '/carpos_marker', 10)
-        self.pub_splined_path  = self.create_publisher(Path, '/local_planned_path', 10)
-        self.redcone_pub       = self.create_publisher(Marker, '/red_cone_marker', 10)
-        self.aeb_roi_pub       = self.create_publisher(Marker, '/aeb_roi', 10)
+        # -----Visualize -----#
+        self.field_pub = self.create_publisher(Marker, '/potential_field', 10)
+        self.trough_pub = self.create_publisher(Marker, '/trough_marker', 10)
+        self.valid_trough_pub = self.create_publisher(Marker, '/valid_trough_marker', 10)
+        self.carpos_pub = self.create_publisher(Marker, '/carpos_marker', 10)
+        self.pub_splined_path = self.create_publisher(Path, '/local_planned_path', 10)
+        self.redcone_pub = self.create_publisher(Marker, '/red_cone_marker', 10)
+        self.aeb_roi_pub = self.create_publisher(Marker, '/aeb_roi', 10)
 
         #----- 그리드 및 좌표계 정의 -----#
-        self.grid_x = np.arange(-X_RANGE, X_RANGE + GRID_RES, GRID_RES)
-        self.grid_y = np.arange(-Y_BACK, Y_RANGE + GRID_RES, GRID_RES)
-        self.X, self.Y = np.meshgrid(self.grid_x, self.grid_y)
+        self.grid_x = np.arange(self.GRID_BACK, self.GRID_FORWARD + GRID_RES, GRID_RES)
+        self.grid_y = np.arange(-self.GRID_LEFTRIGHT, self.GRID_LEFTRIGHT + GRID_RES, GRID_RES)
+        self.X, self.Y   = np.meshgrid(self.grid_x, self.grid_y)
 
         #----- 콘 좌표 정의 -----#
-        self.cone_data: List[Tuple[float, float, float]] = []
-        self.frame_buffer: deque = deque(maxlen=FRAME_BUFFER)
-        self.red_cone: List[Tuple[float, float, float]] = []
+        self.cone_data = []
+        self.frame_buffer = deque(maxlen=FRAME_BUFFER)
+        self.red_cone = []
 
-        #----- TF Buffer/Listener (프레임 변환용) -----#
+        #----- TF 프레임 변환 -----#
         self.tf_buffer = Buffer()
         self.tf_listener = TransformListener(self.tf_buffer, self)
 
         #----- 메인루프 주기적 실행 -----#
         self.create_timer(0.1, self.main_loop)
 
-    #=======================
-    #  Callbacks
-    #=======================
+    # #----- Callback : Cone 데이터 저장 -----#
     def cones_callback(self, msg: TrackedConeArray):
         n_cones = len(msg.cones)
+
+        # 데이터가 없으면 return
         if n_cones == 0:
-            return
+            return 
         new_frame = []
-        for cone in msg.cones:
+        for _, cone in enumerate(msg.cones):
+            # 각 cone은 TrackedCone 타입
             x, y, z = cone.position.x, cone.position.y, cone.position.z
             new_frame.append((x, y, z))
+
         self.frame_buffer.append(new_frame)
-        # 버퍼가 가득 차야만 사용 → 기존 로직 유지(필요시 완화 가능)
+
         if len(self.frame_buffer) == FRAME_BUFFER:
             self.cone_data = sum(self.frame_buffer, [])
         else:
@@ -150,9 +169,7 @@ class PotentialFieldLabeler(Node):
                 x, y, z = cone.position.x, cone.position.y, cone.position.z
                 self.red_cone.append((x, y, z))
 
-    #=======================
-    #  Math / TF Helpers
-    #=======================
+    #----- TF 관련 -----#
     @staticmethod
     def _quat_to_yaw(q) -> float:
         # q: geometry_msgs/Quaternion
@@ -197,23 +214,24 @@ class PotentialFieldLabeler(Node):
             yb = s * x_ + c * y_ + t.y
             out.append((float(xb), float(yb)))
         return out
-
-    #=======================
-    #  Field / Path
-    #=======================
+    
+    #----- Potential Field 형성 -----#
     def create_potential_field(self, points: List[Tuple[float, float]]) -> np.ndarray:
         field = np.zeros_like(self.X)
         for x_i, y_i in points:
-            field += AMP * np.exp(-((self.X - x_i) ** 2 + (self.Y - y_i) ** 2) / (2 * SIGMA ** 2))
+            field += AMP * np.exp(-((self.X - x_i)**2 + (self.Y - y_i)**2) / (2 * self.FIELD_SIGMA **2))
         return field
-
+    
+    #----- Trough(골) 좌표 산출 -----#
     def get_trough_point(self, field: np.ndarray) -> List[Tuple[float, float]]:
         trough_point: List[Tuple[float, float]] = []
         rows, cols = field.shape
+
         for i in range(1, rows - 1):
             for j in range(1, cols - 1):
                 center = field[i, j]
                 satisfied = 0
+                #8방향 4쌍
                 if center < field[i, j - 1] and center < field[i, j + 1]:
                     satisfied += 1
                 if center < field[i - 1, j] and center < field[i + 1, j]:
@@ -222,6 +240,7 @@ class PotentialFieldLabeler(Node):
                     satisfied += 1
                 if center < field[i - 1, j + 1] and center < field[i + 1, j - 1]:
                     satisfied += 1
+
                 if satisfied >= 2:
                     x, y = self.grid_x[j], self.grid_y[i]
                     trough_point.append((x, y))
@@ -235,11 +254,11 @@ class PotentialFieldLabeler(Node):
         out = []
         for x, y in pts:
             v = np.array([x - CAR_X, y - CAR_Y], dtype=float)
-            if float(np.dot(v, heading)) >= FORWARD_DOT_EPS:
+            if float(np.dot(v, heading)) >= PATH_FORWARD:
                 out.append((x, y))
         return out
-
-    # ---- 유효좌표 연결(전방 제약) ---- #
+    
+    #----- 유효좌표 선정 -----#
     def validation_filter(self, troughpoints: List[Tuple[float, float]]) -> List[Tuple[float, float]]:
         if not troughpoints:
             return []
@@ -249,7 +268,7 @@ class PotentialFieldLabeler(Node):
         ahead = []
         for p in troughpoints:
             v = np.array([p[0] - CAR_X, p[1] - CAR_Y], dtype=float)
-            if float(np.dot(v, heading)) >= FORWARD_DOT_EPS:
+            if float(np.dot(v, heading)) >= PATH_FORWARD:
                 ahead.append(p)
         if not ahead:
             return []
@@ -259,19 +278,23 @@ class PotentialFieldLabeler(Node):
         path = [current]
         remaining.remove(current)
 
+        if np.hypot(current[0], current[1]) > PATH_START_THRESH:
+            filtered = []
+            return filtered
+
         while remaining:
             def score(p):
                 v = np.array([p[0] - current[0], p[1] - current[1]], dtype=float)
                 dist = float(np.hypot(v[0], v[1]))
                 forward = float(np.dot(v, heading))
-                pen = 1e3 if forward < FORWARD_DOT_EPS else 0.0
+                pen = 1e3 if forward < PATH_FORWARD else 0.0
                 return dist + pen
 
             next_point = min(remaining, key=score)
             vx, vy = (next_point[0] - current[0]), (next_point[1] - current[1])
             dist = math.hypot(vx, vy)
             # 거리 제한 + 뒤로 크게 가는 스텝 차단
-            if dist > DIST_THRESH or np.dot([vx, vy], heading) < FORWARD_DOT_EPS:
+            if dist > DIST_THRESH or np.dot([vx, vy], heading) < PATH_FORWARD:
                 break
 
             path.append(next_point)
@@ -280,9 +303,7 @@ class PotentialFieldLabeler(Node):
 
         return path
 
-    #=======================
-    #  B-스플라인 스무딩 + 등간격 샘플
-    #=======================
+    # ---- 호길이 등간격 재샘플 ---- #
     @staticmethod
     def _resample_by_arclength(pts: List[Tuple[float,float]], ds: float) -> List[Tuple[float,float]]:
         if not pts or len(pts) < 2:
@@ -299,100 +320,59 @@ class PotentialFieldLabeler(Node):
         y_new = np.interp(s_new, s, p[:,1])
         return list(zip(map(float, x_new), map(float, y_new)))
 
-    def _fit_bspline_smoothing(self, pts: List[Tuple[float,float]], ds: float,
-                               smooth_lambda: float = 0.6, k: int = 3) -> List[Tuple[float,float]]:
+    def splining(self, path, ds: float = 0.2):
         """
-        splprep/splev 기반 B-스플라인 스무딩. 호길이 파라미터화 후 s에 맞춰 샘플링.
-        smooth_lambda ↑ → 더 매끈(점들을 덜 집요하게 통과)
+        path: [(x,y), ...]
+        return: 시작점부터 ds 간격(실제로는 전체 길이를 n등분)으로 리샘플링된 경로
         """
-        if len(pts) < 2:
-            return pts
+        # 0) 빈 입력 방어
+        if not path:
+            return []
 
-        P = np.array(pts, dtype=float)
+        # 1) 너무 가까운 중복점 제거
+        unique = [path[0]]
+        for p in path[1:]:
+            if hypot(p[0] - unique[-1][0], p[1] - unique[-1][1]) > 1e-3:
+                unique.append(p)
 
-        # 호길이 파라미터화
-        seg = np.linalg.norm(P[1:] - P[:-1], axis=1) if len(P) > 1 else np.array([0.0])
-        s_arclen = np.concatenate([[0.0], np.cumsum(seg)])
-        L = float(s_arclen[-1])
-        if L < 1e-6:
-            return pts
+        # 2) 점이 1~2개면 스플라인 대신 직선/점 리샘플링
+        if len(unique) < 3:
+            return self._resample_by_arclength(unique, ds)
 
-        # splprep 제약: k <= n-1
-        k = int(max(1, min(k, len(P) - 1)))
-
-        # 스무딩 강도 설정(데이터 규모와 목표 간격 고려)
-        s_val = float(max(1e-9, smooth_lambda * len(P) * (ds ** 2)))
+        # 3) 스플라인 보간 후, 아크길이 기준으로 재샘플링
+        x, y = zip(*unique)
+        x = np.asarray(x, dtype=float)
+        y = np.asarray(y, dtype=float)
 
         try:
-            # u=s_arclen 을 직접 사용 → 곡선 길이에 따라 자연스런 파라미터
-            tck, u = splprep([P[:,0], P[:,1]], u=s_arclen, s=s_val, k=k, per=False)
+            from scipy.interpolate import splprep, splev
+            k = min(3, len(unique) - 1)
+            tck, _ = splprep([x, y], s=2.0, k=k)
+
+            # 곡선 형상을 충분히 보존하기 위해 촘촘히 샘플링
+            n_dense = max(200, len(unique) * 20)
+            u_fine = np.linspace(0.0, 1.0, n_dense)
+            x_f, y_f = splev(u_fine, tck)
+            pts_dense = list(zip(x_f, y_f))
+
+            return self._resample_by_arclength(pts_dense, ds)
         except Exception:
-            # 데이터가 빡빡하면 차수 낮춰 재시도
-            k = int(max(1, min(2, len(P) - 1)))
-            tck, u = splprep([P[:,0], P[:,1]], u=s_arclen, s=s_val, k=k, per=False)
-
-        # 등간격 샘플
-        n = max(2, int(L / ds) + 1)
-        u_new = np.linspace(s_arclen[0], s_arclen[-1], n)
-        x_new, y_new = splev(u_new, tck)
-
-        return list(zip(map(float, x_new), map(float, y_new)))
-
-    @staticmethod
-    def _savgol(pts: List[Tuple[float,float]], window: int, poly: int) -> List[Tuple[float,float]]:
-        # (선택) B-스플라인으로 충분히 매끈하면 보통 불필요. 정말 필요할 때만 아주 약하게.
-        if not pts:
-            return pts
-        x = np.array([p[0] for p in pts], dtype=float)
-        y = np.array([p[1] for p in pts], dtype=float)
-        w = window if window % 2 == 1 else window + 1
-        max_w = len(x) if len(x) % 2 == 1 else len(x) - 1
-        if max_w < 3:
-            return pts
-        w = min(w, max_w)
-        if w <= poly:
-            return pts
-        x_s = savgol_filter(x, window_length=w, polyorder=poly, mode='interp')
-        y_s = savgol_filter(y, window_length=w, polyorder=poly, mode='interp')
-        return list(zip(map(float, x_s), map(float, y_s)))
-
-    def splining(self, path: List[Tuple[float, float]]) -> List[Tuple[float, float]]:
-        if not path:
-            return []
-
-        # 전방 포인트만 남기고
-        path = self._filter_ahead(path)
-        if not path:
-            return []
-
-        # B-스플라인 스무딩 + 등간격 샘플
-        curve = self._fit_bspline_smoothing(
-            path,
-            ds=self.resample_ds,
-            smooth_lambda=self.smooth_lambda,
-            k=self.bspline_k
-        )
-
-        # 필요시 아주 약한 SG 한 번(기본적으로 비권장)
-        # curve = self._savgol(curve, max(5, self.sg_window//2*2+1), max(2, min(3, self.sg_poly)))
-
-        return curve
-
-    #=======================
-    #  좌/우 라벨링
-    #=======================
+            # 스플라인 실패 시 원본(중복 제거된) 궤적을 그대로 거리기반 리샘플링
+            return self._resample_by_arclength(unique, ds)
+        
+    #----- 좌,우 라벨링 -----#
     def cone_sort(self, cones: List[Tuple[float, float, float]], path: List[Tuple[float, float]]):
         if len(cones) == 0 or len(path) < 2:
             return [], []
 
-        path_np = np.array(path, dtype=float)
+        path_np = np.array(path)
         left_cones = []
         right_cones = []
 
         for cone in cones:
-            cone_xy = np.array(cone[:2], dtype=float)
+            cone_xy = np.array(cone[:2])
             dists = np.linalg.norm(path_np - cone_xy, axis=1)
-            idx = int(np.argmin(dists))
+            idx = np.argmin(dists)
 
             if idx < len(path_np) - 1:
                 tangent = path_np[idx + 1] - path_np[idx]
@@ -403,9 +383,9 @@ class PotentialFieldLabeler(Node):
                 continue
 
             tangent = tangent / np.linalg.norm(tangent)
-            normal = np.array([-tangent[1], tangent[0]], dtype=float)
+            normal = np.array([-tangent[1], tangent[0]])
             rel = cone_xy - path_np[idx]
-            side = float(np.dot(rel, normal))
+            side = np.dot(rel, normal)
 
             if side > 0:
                 left_cones.append(cone)
@@ -413,20 +393,22 @@ class PotentialFieldLabeler(Node):
                 right_cones.append(cone)
 
         return left_cones, right_cones
-
+    
     def determine_aeb(self, cone: List[Tuple[float, float, float]]):
         n_red = 0
         for x, y, z in cone:
-            if 0.0 <= x <= AEB_VER and -AEB_HOR <= y <= AEB_HOR:
+            if 0 <= x <= AEB_VER and -AEB_HOR <= y <= AEB_HOR:
                 n_red += 1
         aebmsg = UInt8()
         aebmsg.data = 1 if n_red > AEB_TRHESH else 0
         self.aeb_pub.publish(aebmsg)
         return aebmsg.data
 
-    #=======================
-    #  Visualization
-    #=======================
+    '''''''''''''''
+    Vsualization
+    '''''''''''''''
+
+    #----- 퍼텐셜 필드 시각화 -----#
     def vis_Field(self, field: np.ndarray):
         marker = Marker()
         marker.header.frame_id = 'os_sensor'
@@ -446,12 +428,15 @@ class PotentialFieldLabeler(Node):
                 x_raw = self.grid_x[j]
                 y_raw = self.grid_y[i]
                 z = float(field[i, j])
+
                 p = Point(x=float(x_raw), y=float(y_raw), z=z)
-                c = ColorRGBA(r=norm[i, j], g=0.0, b=1.0 - norm[i, j], a=0.4)
+                c = ColorRGBA(r=norm[i, j], g=0.0, b=1.0 - norm[i, j], a=0.8)
                 marker.points.append(p)
                 marker.colors.append(c)
+
         self.field_pub.publish(marker)
 
+    #----- 골 좌표 시각화 -----#
     def vis_TroughPoints(self, troughs: List[Tuple[float, float]]):
         marker = Marker()
         marker.header.frame_id = 'os_sensor'
@@ -464,10 +449,14 @@ class PotentialFieldLabeler(Node):
         marker.scale.y = 0.15
         marker.color = ColorRGBA(r=1.0, g=1.0, b=0.0, a=1.0)
         marker.pose.orientation.w = 1.0
+
         for x, y in troughs:
-            marker.points.append(Point(x=float(x), y=float(y), z=1.0))
+            p = Point(x=float(x), y=float(y), z=1.0)
+            marker.points.append(p)
+
         self.trough_pub.publish(marker)
 
+    #----- 차량 좌표 시각화 -----#
     def vis_CarPosition(self):
         marker = Marker()
         marker.header.frame_id = 'os_sensor'
@@ -478,12 +467,13 @@ class PotentialFieldLabeler(Node):
         marker.action = Marker.ADD
         marker.scale.x = 0.15
         marker.scale.y = 0.15
-        marker.scale.z = 0.15
+        marker.scale.z = 0.15 
         marker.color = ColorRGBA(r=1.0, g=1.0, b=1.0, a=1.0)
         marker.pose.orientation.w = 1.0
         marker.points.append(Point(x=float(CAR_X), y=float(CAR_Y), z=1.0))
         self.carpos_pub.publish(marker)
 
+    #----- 유효 좌표 시각화 -----#
     def vis_ValidPoints(self, points: List[Tuple[float, float]]):
         marker = Marker()
         marker.header.frame_id = 'os_sensor'
@@ -495,10 +485,14 @@ class PotentialFieldLabeler(Node):
         marker.scale.x = 0.1
         marker.color = ColorRGBA(r=0.0, g=1.0, b=0.0, a=1.0)
         marker.pose.orientation.w = 1.0
+
         for x, y in points:
-            marker.points.append(Point(x=float(x), y=float(y), z=1.5))
+            p = Point(x=float(x), y=float(y), z=1.5)
+            marker.points.append(p)
+
         self.valid_trough_pub.publish(marker)
 
+    #----- Splined 경로 시각화 -----#
     def vis_SplinedPath(self, points: List[Tuple[float, float]]):
         if not points:
             return
@@ -529,6 +523,7 @@ class PotentialFieldLabeler(Node):
 
         self.pub_splined_path.publish(path_msg)
 
+    #----- Left Cone -----#
     def vis_leftcone(self, cones: List[Tuple[float, float, float]]):
         marker = Marker()
         marker.header.frame_id = 'os_sensor'
@@ -540,12 +535,15 @@ class PotentialFieldLabeler(Node):
         marker.scale.x = 0.3
         marker.scale.y = 0.3
         marker.scale.z = 0.3
-        marker.color = ColorRGBA(r=0.0, g=0.0, b=1.0, a=1.0)
+        marker.color = ColorRGBA(r=0.0, g=0.0, b=1.0, a=1.0)  # 파란색
         marker.pose.orientation.w = 1.0
+
         for x, y, z in cones:
             marker.points.append(Point(x=float(x), y=float(y), z=float(z)))
+
         self.leftcone_pub.publish(marker)
 
+    #----- Right Cone -----#
     def vis_rightcone(self, cones: List[Tuple[float, float, float]]):
         marker = Marker()
         marker.header.frame_id = 'os_sensor'
@@ -557,12 +555,15 @@ class PotentialFieldLabeler(Node):
         marker.scale.x = 0.3
         marker.scale.y = 0.3
         marker.scale.z = 0.3
-        marker.color = ColorRGBA(r=1.0, g=1.0, b=0.0, a=1.0)
+        marker.color = ColorRGBA(r=1.0, g=1.0, b=0.0, a=1.0)  # 노란색
         marker.pose.orientation.w = 1.0
+
         for x, y, z in cones:
             marker.points.append(Point(x=float(x), y=float(y), z=float(z)))
+
         self.rightcone_pub.publish(marker)
 
+    #----- Red Cone -----#
     def vis_RedCone(self):
         marker = Marker()
         marker.header.frame_id = 'os_sensor'
@@ -575,11 +576,14 @@ class PotentialFieldLabeler(Node):
         marker.scale.y = 0.3
         marker.scale.z = 0.3
         marker.pose.orientation.w = 1.0
-        marker.color = ColorRGBA(r=1.0, g=0.0, b=0.0, a=0.8)
+        marker.color = ColorRGBA(r=1.0, g=0.0, b=0.0, a=0.8)  # 항상 동일한 빨간색
+
         for x, y, z in self.red_cone:
             marker.points.append(Point(x=float(x), y=float(y), z=float(z)))
+
         self.redcone_pub.publish(marker)
 
+    #----- AEB ZONE -----#
     def vis_AEBzone(self, aeb_flag: int):
         marker = Marker()
         marker.header.frame_id = 'os_sensor'
@@ -595,70 +599,84 @@ class PotentialFieldLabeler(Node):
         marker.pose.position.y = 0.0
         marker.pose.position.z = 0.1
         marker.pose.orientation.w = 1.0
-        marker.color = ColorRGBA(r=1.0, g=0.0, b=0.0, a=(0.8 if aeb_flag == 1 else 0.2))
+
+        alpha = 0.8 if aeb_flag == 1 else 0.2
+        marker.color = ColorRGBA(r=1.0, g=0.0, b=0.0, a=alpha)
+
         self.aeb_roi_pub.publish(marker)
 
-    #=======================
-    #  Main Loop
-    #=======================
     def main_loop(self):
         '''
-        1) 콘 좌표 수집 → 2) Potential Field → 3) Trough 탐색
-        4) 전방 필터 + 근접 연결 → 5) B-스플라인 스무딩(+등간격샘플)
-        6) 경로 기준 좌/우 라벨링 → 7) 퍼블리시/시각화
+        **파이프라인 구성**
+        1. 구독한 Cone 데이터 x,y좌표 추출
+        2. Potential Field 생성
+        3. Field 영역 내 Trough(골) Point 탐색
+        4. 근거리 기반 유효 좌표 필터링
+        5. 스플라이닝 진행
+        6. 경로 퍼블리시를 위한 등간격 리샘플링
+        7. 법선 기반 좌우측 콘 Labeling
+        8. 퍼블리시
         '''
+        #데이터 오류 예외처리
         if len(self.cone_data) < 3:
             return
 
-        # 1) Field 생성
+        #----- Potential Field 생성 -----#
         xy_cones = [(x, y) for x, y, _ in self.cone_data]
         PotentialField = self.create_potential_field(xy_cones)
 
-        # 2) Trough 추출
+        #----- Trough Point 탐색 -----#
         TroughPoints = self.get_trough_point(PotentialField)
 
-        # 3) 전방 필터 + 유효 포인트 연결
+        #----- 유효 좌표 필터링 -----#
         AheadTroughs = self._filter_ahead(TroughPoints)
         ValidPath = self.validation_filter(AheadTroughs)
 
-        # 4) 스플라인 + 후처리(B-스플라인 스무딩)
+        #----- Splining -----#
         SplinedPath = self.splining(ValidPath)
 
-        # 5) 좌/우 라벨링
+        #----- Cone Sorting -----#
         left_cones, right_cones = self.cone_sort(self.frame_buffer[-1], SplinedPath)
 
-        # 6) AEB
+        #----- AEB Determination -----#
         aeb_flag = self.determine_aeb(self.red_cone)
 
-        # 7) Labeled Cone Publish
+        #----- Labeled Cone Publish -----#
         labeled_msg = ModifiedFloat32MultiArray()
         labeled_msg.header.frame_id = "os_sensor"
         labeled_msg.header.stamp = self.get_clock().now().to_msg()
+
         labeled_msg.data = []
         labeled_msg.class_names = []
+
         for cone in left_cones:
             labeled_msg.data.extend([cone[0], cone[1], cone[2]])
             labeled_msg.class_names.append("left")
+
         for cone in right_cones:
             labeled_msg.data.extend([cone[0], cone[1], cone[2]])
             labeled_msg.class_names.append("right")
+
         self.pub_labeled_cones.publish(labeled_msg)
 
-        # 시각화
+        #----- Visualize -----#
         self.vis_Field(PotentialField)
         self.vis_TroughPoints(TroughPoints)
         self.vis_CarPosition()
         self.vis_ValidPoints(ValidPath)
-        self.vis_SplinedPath(SplinedPath)
+        self.vis_SplinedPath(SplinedPath) #시각화와 경로 토픽 동시 퍼블리시
         self.vis_leftcone(left_cones)
         self.vis_rightcone(right_cones)
         self.vis_RedCone()
         self.vis_AEBzone(aeb_flag)
 
+        return
+    
 def main(args=None):
     rclpy.init(args=args)
     node = PotentialFieldLabeler()
-    node.get_logger().info('Potential Field Labeler Started (B-spline smoothing + resample)')
+    node.get_logger().info('Potential Field Labeler Started')
+    
     try:
         rclpy.spin(node)
     except KeyboardInterrupt:
