@@ -18,7 +18,7 @@ speed_planner:
     # "index":    fixed_index_offset 인덱스 사용(고정 샘플수, ds 일정일 때 distance와 유사)
     # "time":     현재속도 v * preview_time 만큼 앞 지점 사용(속도 의존 프리뷰)
     # "adaptive": 곡률 적응형 프리뷰 (커브 급할수록 짧게, 직선일수록 멀리)
-    cmd_index_mode: "time" 
+    cmd_index_mode: "adaptive"   # "distance" / "index" / "time" / "adaptive"
 
     # ---- distance 모드용 ----
     cmd_offset_m: 1.5                  # [m] 권장 1.0~2.5 (직선에서 가속 잘 붙게 하려면 ↑)
@@ -31,23 +31,23 @@ speed_planner:
 
     # ---- adaptive 모드용 ----
     preview_time_min: 0.25             # [s] 최소 프리뷰 시간 (급커브 시 최소값으로 수렴)
-    preview_time_max: 0.80             # [s] 최대 프리뷰 시간 (직선 시 최대값으로 수렴)
-    kappa_beta: 2.0                    # 곡률 민감도(↑면 곡률에 더 민감)
+    preview_time_max: 0.70             # [s] 최대 프리뷰 시간 (직선 시 최대값으로 수렴)
+    kappa_beta: 5.0                    # 곡률 민감도(↑면 곡률에 더 민감)
     kappa_window: 7                    # 현재 기준 |kappa| 평균에 쓸 샘플 개수(0=미사용, 3~7 권장)
 
     # ========== 프리뷰 구간 보수성/연속성 ==========
-    use_window_min: false              # true면 [i0..i0+N] 구간 최솟값 사용(보수적 제동 여유)
-    look_ahead_count: 0                # 최솟값 창 크기(0~3 권장). 직선은 0~1, 불확실 땐 2~3
+    use_window_min: true              # true면 [i0..i0+N] 구간 최솟값 사용(보수적 제동 여유)
+    look_ahead_count: 3                # 최솟값 창 크기(0~3 권장). 직선은 0~1, 불확실 땐 2~3
     seed_from_current_speed: true      # 첫 발행 시 /current_speed로 가속클램프 시드(초기 0 묶임 방지)
     clamp_accel: true                  # v_cmd에 종방향 가/감속 클램프 적용
     a_long_max: 4.0                    # [m/s^2] 가속 한계 (직선 가속 ↑: 3.0~5.0 권장)
     a_long_min: -3.0                   # [m/s^2] 감속 한계(음수) (제동 여유 확보 시 |값| ↑)
 
     # ========== 경로 샘플 간격/속도/횡가속 한계 ==========
-    ds: 0.5                            # [m] 샘플 간격 (reference_path_planning.py 의 arc_step와 동일해야 함!)
+    ds: 0.2                            # [m] 샘플 간격 (reference_path_planning.py 의 arc_step와 동일해야 함!)
     v_min: 0.20                        # [m/s] 너무 낮게 두면 정지 근처 진동↑
     v_max: 2.3                         # [m/s] 직선 목표 최고속 (백파일 최고속도 이상으로 설정)
-    a_lat_max: 3.0                     # [m/s^2] 횡가속 한계 (낮추면 커브서 감속↑ / 보수적)
+    a_lat_max: 2.0                     # [m/s^2] 횡가속 한계 (낮추면 커브서 감속↑ / 보수적)
 
     # ========== 수치 안정화/스무딩 ==========
     eps_kappa: 1.0e-6                  # 곡률 0 분모 보호
