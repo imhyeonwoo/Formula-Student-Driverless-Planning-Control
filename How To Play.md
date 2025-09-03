@@ -76,6 +76,7 @@
  ros2 run gps_imu_fusion_ihw current_speed_node
  # 100Hz
  ```
+ -> publishes `/current_speed` -> change if wanted
  - 이것 또한 마찬가지로 Localization에서 잘하거나 제어 파트에서 속도 잘 주면 사용
 
  ## 5-1. 곡률 기반 속도 플래닝 노드 실행
