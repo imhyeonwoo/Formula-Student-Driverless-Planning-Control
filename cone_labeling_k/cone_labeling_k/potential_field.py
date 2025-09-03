@@ -45,7 +45,7 @@ qos.reliability = ReliabilityPolicy.BEST_EFFORT
 GRID_FORWARD = 10.0             #필드 형성
 GRID_BACK = 5.0
 GRID_LEFTRIGHT = 8.0
-GRID_RES = 0.1                  #그리드 단위
+GRID_RES = 0.3                  #그리드 단위
 AMP = 1.5                       #가우시안 필터 최댓값
 SIGMA = 1.2                     #표준편차
 
