@@ -197,9 +197,17 @@ private:
     return cmd_deg_prev_;
   }
 
+  // ---- 좌회전 : (+), 우회전 : (-) ----
+  // void publishSteerDeg(double steer_deg) {
+  //   std_msgs::msg::Float32 out;
+  //   out.data = static_cast<float>(steer_deg);
+  //   pub_steer_->publish(out);
+  // }
+
+  // ---- 좌회전 : (-), 우회전 : (+) ---- : 현재 상황
   void publishSteerDeg(double steer_deg) {
     std_msgs::msg::Float32 out;
-    out.data = static_cast<float>(steer_deg);
+    out.data = static_cast<float>(-1.0*steer_deg);
     pub_steer_->publish(out);
   }
 
