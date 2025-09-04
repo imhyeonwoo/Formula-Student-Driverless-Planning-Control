@@ -108,10 +108,13 @@ class CarMarkerPublisher(Node):
         self.declare_parameter('steer_topic', '/cmd/steer') # 추후 제어에서 넘겨주는 실제 조향각 토픽(/ctrl/steer)으로 변환하기
         self.declare_parameter('steer_limit_deg', 28.0)   # 시각화용 제한(도)
         self.declare_parameter('steer_ema_tau', 0.10)     # [s] 시각화 필터(EMA)
+        # 외부 입력의 부호 체계가 반대일 때(True면 입력 부호를 반전: 좌회전 음수/우회전 양수 → 내부 표준 좌+, 우−로 변환)
+        self.declare_parameter('invert_steer_sign', True)
         steer_topic = self.get_parameter('steer_topic').get_parameter_value().string_value
         self.steer_limit_deg = float(self.get_parameter('steer_limit_deg').value)
         self.steer_limit_rad = math.radians(self.steer_limit_deg)
         self.steer_tau = float(self.get_parameter('steer_ema_tau').value)
+        self.invert_steer_sign = bool(self.get_parameter('invert_steer_sign').value)
 
         # ===== 시각화 옵션 =====
         # Ackermann 분해 토글 + 화살표 스타일
@@ -390,8 +393,11 @@ class CarMarkerPublisher(Node):
 
     # -------- Callbacks --------
     def _on_steer_deg(self, msg: Float32) -> None:
-        # 입력: deg, 좌회전 + / 우회전 −
+        # 입력: deg. 기본 가정은 좌회전 + / 우회전 −.
+        # invert_steer_sign=True면 외부 입력(좌−/우+)을 내부 표준(좌+/우−)으로 변환.
         steer_deg = float(msg.data)
+        if self.invert_steer_sign:
+            steer_deg = -steer_deg
         # 시각화용 제한(도) → 라디안 변환 순서대로 클램프
         steer_deg = max(-self.steer_limit_deg, min(self.steer_limit_deg, steer_deg))
         self._steer_raw_rad = math.radians(steer_deg)
