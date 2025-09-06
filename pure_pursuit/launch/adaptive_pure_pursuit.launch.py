@@ -5,8 +5,9 @@ import os
 
 def generate_launch_description():
     pkg_share = get_package_share_directory('pure_pursuit')
+    # Use steering-course config by default
+    param_file = os.path.join(pkg_share, 'config', 'adaptive_steering_course.yaml')
     # param_file = os.path.join(pkg_share, 'config', 'adaptive_pp.yaml')
-    param_file = os.path.join(pkg_share, 'config', 'ad_test1.yaml')
 
     return LaunchDescription([
         Node(
@@ -15,5 +16,13 @@ def generate_launch_description():
             name='pure_pursuit_adaptive',
             output='screen',
             parameters=[param_file],
-        )
+        ),
+        # Constant publishers for /cmd/speed and /cmd/rpm (values set in YAML)
+        Node(
+            package='pure_pursuit',
+            executable='constant_cmd_publisher',
+            name='constant_cmd_publisher',
+            output='screen',
+            parameters=[param_file],
+        ),
     ])
