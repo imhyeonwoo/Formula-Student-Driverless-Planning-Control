@@ -32,11 +32,11 @@ pure_pursuit_adaptive:
     alpha_max_m: 3.0
     beta_max: 3.0
     curv_window_m: 2.0
-    outer_offset_max_m: 1.0
-    outer_offset_tau_max: 0.7
+    outer_offset_max_m: 0.6   # 바깥 이동 최대값. 줄이면 pl이 바깥으로 밀리는 상한이 줄어듦.
+    outer_offset_tau_max: 0.7 # 값을 낮추면: 코너에서 pl이 바깥으로 덜 밀림(보수적). 값을 높이면: 바깥 오프셋이 더 자주/크게 발생(공격적).
     outer_offset_kappa_gate: 0.03
     track_half_width_m: 2.5   # 트랙 폭의 절반
-    track_margin_m: 0.2       # 차량이 트랙 경계에 너무 가까이 가지 않도록 마진
+    track_margin_m: 0.3       # 차량이 트랙 경계에 너무 가까이 가지 않도록 마진
 
     # Command shaping
     publish_rate_hz: 50.0
