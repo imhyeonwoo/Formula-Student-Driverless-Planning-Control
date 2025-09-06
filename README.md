@@ -185,8 +185,8 @@ ros2 run cones_no_color reference_path_planning.py
 ---
 
 <div align="center">
-  <img src="docs/images/teammates/potential field1.gif" width="45%" />
-  <img src="docs/images/teammates/potential field2.gif" width="45%" />
+  <img src="docs/images/attempts/potential field1.gif" width="45%" />
+  <img src="docs/images/attempts/potential field2.gif" width="45%" />
   <br>
   <b>Potential Field-Based Local Path Planning</b>
 </div>
@@ -206,6 +206,30 @@ ros2 run cones_no_color reference_path_planning.py
   <li><b>Yellow Dots:</b> Trough Points before smoothing</li>
   <li><b>Pink Line:</b> Final smoothed local path</li>
   <li><b>Blue / Yellow Spheres:</b> Left and Right cones respectively</li>
+</ul>
+
+
+<div align="center">
+  <img src="docs/images/attempts/greedy path planning.gif" width="70%" />
+  <br>
+  <b>Greedy Graph-Guided Local Path Planning</b>
+</div>
+
+<p>
+
+  This GIF demonstrates <b>local path planning using a Greedy, graph-guided centerline search</b>. The pipeline
+  reconstructs left/right boundary lines from color-labeled cones, generates robust midpoints
+  (Hungarian / projection / resample-align), and then selects a forward-feasible center path on a radius graph by
+  minimizing distance with <b>boundary</b>, <b>directional</b>, and <b>smoothness</b> penalties under heading-change gates.
+  The result is resampled and <b>anchored to the vehicle's <code>base_link</code> frame</b>, then published as <code>nav_msgs/Path</code>.
+</p>
+
+<ul>
+  <li><b>Left/Right Lines:</b> Reconstructed track boundaries from cones</li>
+  <li><b>Green Dots:</b> Midpoints between boundaries</li>
+  <li><b>Green Line:</b> Final fixed-length local center path</li>
+  <li><b>Blue / Yellow Spheres:</b> Left and Right cones respectively</li>
+  
 </ul>
 
 
