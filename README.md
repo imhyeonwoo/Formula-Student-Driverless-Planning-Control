@@ -80,11 +80,12 @@ Planning/
 | **cones_no_color** | • Generates an optimal reference path from cone locations<br>• Provides RViz visualization nodes | Python |
 | **gps_global_planner** | • Converts RTK-GPS logs to CSV and nav_msgs/Path<br>• ENU ↔ Local Cartesian conversion<br>• Colors the global path by state and speed | C++, Python |
 | **reference_path_classifier** | • Classifies cones on the left and right sides relative to the vehicle | Python |
+| **pure_pursuit** | •  Tracks the local path via Pure Pursuit (static/dynamic/adaptive look-ahead)<br>• Subscribes nav_msgs/Path (/local_planned_path) and /current_speed; publishes /cmd/steer and RViz debug markers| C++ |
 
 ---
 
 ## Usage
-- Refer to How To Play.md
+- Refer to `How To Play.md`
 
 ### Build (ROS2 Humble)
 
@@ -107,6 +108,12 @@ ros2 launch reference_path_classifier classify_cones_by_side.launch.py
 
 # 3) Generate a local path based on detected cones
 ros2 run cones_no_color reference_path_planning.py
+
+# 4) Generate and publish the desired speed and RPM based on curvature of the path
+ros2 launch speed_planner simple_speed_planner.launch.py
+
+# 5) Track the local path using (Adaptive) Pure Pursuit Algorithm
+ros2 launch pure_pursuit adaptive_pure_pursuit.launch.py
 ```
 
 ### Demo Video
