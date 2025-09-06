@@ -22,7 +22,8 @@ setup(
     entry_points={
         'console_scripts': [
             # 실행 명령어 등록
-            'path_planning = cone_labeling_hsm.path_planning:main'
+            'path_planning = cone_labeling_hsm.path_planning:main',
+            'straight_path = cone_labeling_hsm.path_planning_for_straight:main'
         ],
     },
 )

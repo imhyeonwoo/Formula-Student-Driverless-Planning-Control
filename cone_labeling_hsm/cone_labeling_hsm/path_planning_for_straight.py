@@ -32,7 +32,7 @@ from custom_interface.msg import TrackedConeArray
 # ──────────────────────────────────────────────────────────────────────────────
 # 기본 파라미터
 # ──────────────────────────────────────────────────────────────────────────────
-INPUT_TOPIC = '/cone/lidar/ukf' #'/cone/fused/ukf'
+INPUT_TOPIC = '/cone/fused/ukf' #잘안되면 '/cone/lidar/ukf'
 OUTPUT_TOPIC = '/cones_marker_array'
 PATH_OUTPUT_TOPIC = '/local_planned_path'   # ← PurePursuit 가 구독할 토픽
 USE_HEADER_FRAME = True
@@ -43,7 +43,7 @@ PROCESS_HZ = 10.0
 REPUBLISH_IDLE_SEC = 0.5
 
 # Grid 그래프 파라미터 (벽/중점 공통 기본)
-EDGE_LEN_TH = 3.5
+EDGE_LEN_TH = 5.0#3.5
 MAX_NEIGHBORS_PER_NODE = 6
 MAX_STEPS = 1000
 MIN_DIST_TH = 1.0
