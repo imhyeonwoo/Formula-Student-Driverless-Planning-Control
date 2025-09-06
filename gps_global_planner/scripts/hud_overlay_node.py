@@ -6,7 +6,7 @@ import rclpy
 from rclpy.node import Node
 from rclpy.qos import qos_profile_sensor_data
 
-from std_msgs.msg import Float32
+from std_msgs.msg import Float32, UInt8
 from sensor_msgs.msg import Imu, NavSatFix
 from nav_msgs.msg import Odometry
 from rviz_2d_overlay_msgs.msg import OverlayText
@@ -32,6 +32,7 @@ class HudOverlayNode(Node):
 
         # ===== Publishers =====
         self.pub_text = self.create_publisher(OverlayText, '/hud/overlay_text', 10)
+        self.pub_estop = self.create_publisher(OverlayText, '/hud/estop_overlay', 10)
         self.pub_kmh = self.create_publisher(Float32, '/current_kmh', 10)  # ← 추가
 
         # ===== Subscribers (Sensor QoS로 호환성 확보) =====
@@ -43,6 +44,7 @@ class HudOverlayNode(Node):
         self.create_subscription(Imu, '/imu/processed', self.cb_imu, qos)  # yaw는 여기서 계산하지 않음
         self.create_subscription(Odometry, '/odometry/filtered', self.cb_odom, qos)
         self.create_subscription(NavSatFix, '/ublox_gps_node/fix', self.cb_fix, qos)
+        self.create_subscription(UInt8, '/estop', self.cb_estop, 10)
 
         # ===== State =====
         self.current_speed = 0.0  # m/s
@@ -51,6 +53,8 @@ class HudOverlayNode(Node):
         self.target_steer = 0.0
         self.yaw_deg = 0.0
         self.position = (0.0, 0.0)
+        self.estop_active = False
+        self._estop_prev_active = False
 
         # GPS 오차 (1-σ, m)
         self.gps_sigma_e = float('nan')  # East 표준편차
@@ -63,6 +67,17 @@ class HudOverlayNode(Node):
         self.create_timer(0.10, self.publish_kmh)      # 10Hz, km/h 값 발행
 
         self.get_logger().info('HUD overlay node started (uses /odometry/filtered orientation for yaw).')
+
+        # ----- Overlay positioning params (for AEB banner alignment) -----
+        # RViz2 overlay plugin uses pixel-like coordinates from the top-left.
+        # To place at the top-right, compute left = rviz_window_width - width - right_margin.
+        self.declare_parameter('rviz_window_width', 1920)
+        self.declare_parameter('estop_width', 520)
+        self.declare_parameter('estop_height', 60)
+        self.declare_parameter('estop_top', 10)
+        self.declare_parameter('estop_right_margin', 20)
+        self.declare_parameter('estop_text_size', 34.0)
+        self.declare_parameter('estop_text', 'AEB ACTIVATED')
 
     # ---------- Callbacks ----------
     def cb_current_speed(self, msg: Float32):
@@ -111,6 +126,9 @@ class HudOverlayNode(Node):
         else:
             self.gps_cov_ok = False
 
+    def cb_estop(self, msg: UInt8):
+        self.estop_active = (int(msg.data) == 1)
+
     # ---------- Publishers ----------
     def publish_overlay(self):
         text = OverlayText()
@@ -152,6 +170,54 @@ class HudOverlayNode(Node):
         )
 
         self.pub_text.publish(text)
+
+        # --- E-STOP banner (blinking red at top) ---
+        banner = OverlayText()
+        # Place at top-right using configured window width and margins.
+        try:
+            win_w   = int(self.get_parameter('rviz_window_width').value)
+            b_w     = int(self.get_parameter('estop_width').value)
+            b_h     = int(self.get_parameter('estop_height').value)
+            top_px  = int(self.get_parameter('estop_top').value)
+            right_m = int(self.get_parameter('estop_right_margin').value)
+            left_px = max(0, win_w - b_w - right_m)
+
+            banner.left = float(left_px)
+            banner.top  = float(top_px)
+            banner.width  = float(b_w)
+            banner.height = float(b_h)
+        except Exception:
+            # Fallback defaults if fields are missing
+            banner.width = 520
+            banner.height = 60
+        banner.text_size = float(self.get_parameter('estop_text_size').value)
+        banner.line_width = 2
+        banner.font = "DejaVu Sans Mono"
+
+        # Colors
+        banner.bg_color.r = 0.0
+        banner.bg_color.g = 0.0
+        banner.bg_color.b = 0.0
+        banner.bg_color.a = 0.0  # transparent background
+
+        banner.fg_color.r = 1.0
+        banner.fg_color.g = 0.0
+        banner.fg_color.b = 0.0
+
+        if self.estop_active:
+            # 2 Hz blink by toggling alpha
+            t = self.get_clock().now().nanoseconds * 1.0e-9
+            blink_on = (int(t * 2.0) % 2) == 0
+            banner.fg_color.a = 1.0 if blink_on else 0.15
+            banner.text = str(self.get_parameter('estop_text').value)
+            banner.action = OverlayText.ADD
+            self.pub_estop.publish(banner)
+            self._estop_prev_active = True
+        else:
+            if self._estop_prev_active:
+                banner.action = OverlayText.DELETE
+                self.pub_estop.publish(banner)
+                self._estop_prev_active = False
 
     def publish_kmh(self):
         """현재 속도를 km/h로 변환하여 퍼블리시"""
