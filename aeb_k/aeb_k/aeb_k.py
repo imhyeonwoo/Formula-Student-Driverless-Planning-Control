@@ -18,9 +18,9 @@ qos.reliability = ReliabilityPolicy.BEST_EFFORT
 
 # =================== 전역 파라미터 =================== #
 #----- AEB -----#
-AEB_THRESH = 7  # 빨간콘 몇 개 이상일 때 AEB 작동시킬지
+AEB_THRESH = 5  # 빨간콘 몇 개 이상일 때 AEB 작동시킬지
 AEB_HOR = 6.0   # AEB 작동 영역의 좌우 반폭(Horizontal)
-AEB_VER = 4.0   # AEB 작동 영역의 앞쪽 길이(Vertical)
+AEB_VER = 6.0   # AEB 작동 영역의 앞쪽 길이(Vertical)
 
 #=====================================================#
 

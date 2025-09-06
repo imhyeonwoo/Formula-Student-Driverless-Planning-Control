@@ -9,7 +9,7 @@ setup(
     data_files=[
         ('share/ament_index/resource_index/packages', ['resource/' + package_name]),
         ('share/' + package_name, ['package.xml']),
-        ('share/' + package_name + '/launch', ['aeb_k/launch/aeb_k.launch.py']),
+        ('share/' + package_name + '/launch', ['aeb_k/launch/aeb_k.launch.py', 'aeb_k/launch/cone_visualizer.launch.py']),
     ],
     install_requires=['setuptools'],
     zip_safe=True,
@@ -20,7 +20,7 @@ setup(
     entry_points={
         'console_scripts': [
             'aeb_k = aeb_k.aeb_k:main',
+            'cone_visualizer = aeb_k.cone_visualizer:main',
         ],
     },
 )
-
