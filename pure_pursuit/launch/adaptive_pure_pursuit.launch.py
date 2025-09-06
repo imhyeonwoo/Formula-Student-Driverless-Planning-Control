@@ -9,13 +9,13 @@ import os
 def generate_launch_description():
     pkg_share = get_package_share_directory('pure_pursuit')
     # Param file (current default)
-    # param_file = os.path.join(pkg_share, 'config', 'adaptive_steering_course.yaml')
-    param_file = os.path.join(pkg_share, 'config', 'adaptive_pp.yaml')
+    param_file = os.path.join(pkg_share, 'config', 'adaptive_steering_course.yaml')
+    # param_file = os.path.join(pkg_share, 'config', 'adaptive_pp.yaml')
     use_constant_cmd = LaunchConfiguration('use_constant_cmd')
 
     return LaunchDescription([
         DeclareLaunchArgument(
-            'use_constant_cmd', default_value='false',
+            'use_constant_cmd', default_value='true',
             description='Launch constant_cmd_publisher to publish /cmd/speed and /cmd/rpm'
         ),
         Node(
