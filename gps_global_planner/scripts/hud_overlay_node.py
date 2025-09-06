@@ -32,7 +32,7 @@ class HudOverlayNode(Node):
 
         # ===== Publishers =====
         self.pub_text = self.create_publisher(OverlayText, '/hud/overlay_text', 10)
-        self.pub_estop = self.create_publisher(OverlayText, '/hud/estop_overlay', 10)
+        self.pub_estop = self.create_publisher(OverlayText, '/hud/aeb_overlay', 10)
         self.pub_kmh = self.create_publisher(Float32, '/current_kmh', 10)  # ← 추가
 
         # ===== Subscribers (Sensor QoS로 호환성 확보) =====
@@ -44,7 +44,7 @@ class HudOverlayNode(Node):
         self.create_subscription(Imu, '/imu/processed', self.cb_imu, qos)  # yaw는 여기서 계산하지 않음
         self.create_subscription(Odometry, '/odometry/filtered', self.cb_odom, qos)
         self.create_subscription(NavSatFix, '/ublox_gps_node/fix', self.cb_fix, qos)
-        self.create_subscription(UInt8, '/estop', self.cb_estop, 10)
+        self.create_subscription(UInt8, '/aeb', self.cb_estop, 10)
 
         # ===== State =====
         self.current_speed = 0.0  # m/s

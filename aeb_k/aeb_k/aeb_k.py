@@ -33,7 +33,7 @@ class AEB(Node):
             TrackedConeArray, '/cone/fused/ukf', self.red_callback, qos)
 
         ###### Publisher ######
-        self.aeb_pub = self.create_publisher(UInt8, '/estop', 10)
+        self.aeb_pub = self.create_publisher(UInt8, '/aeb', 10)
 
         # ----- Visualize -----#
         self.redcone_pub = self.create_publisher(Marker, '/red_cone_marker', 10)
