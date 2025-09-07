@@ -29,8 +29,12 @@ class AEB(Node):
         super().__init__('AEB_Determine_Node')
 
         ###### Subscriber ######
+        # self.red_sub = self.create_subscription(
+        #     TrackedConeArray, '/cone/fused/ukf', self.red_callback, qos)
+
         self.red_sub = self.create_subscription(
-            TrackedConeArray, '/cone/fused/ukf', self.red_callback, qos)
+            TrackedConeArray, '/cone/fused', self.red_callback, qos)
+        
 
         ###### Publisher ######
         self.aeb_pub = self.create_publisher(UInt8, '/aeb', 10)
