@@ -9,7 +9,7 @@ pure_pursuit_static:
     wheelbase_m: 1.3
 
     # Static Look-Ahead Distance
-    lookahead_m: 7.0
+    lookahead_m: 10.0
 
     # Limits / behavior
     publish_rate_hz: 50.0
