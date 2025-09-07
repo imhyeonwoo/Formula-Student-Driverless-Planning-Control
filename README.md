@@ -3,6 +3,12 @@
 A collection of ROS2 packages dedicated to **Path/Speed Planning and Tracking** for a custom-built EV Autonomous Vehicle.  
 This repository manages my personal work for the **Planning / (High-Level)Control Team** in the Student Mobility Competition (Konkuk University - Team K.A.I.).
 
+🚗 **Watch the Demo**  
+- [On-road Test](https://youtube.com/shorts/4p9Xr07viQY)  
+- [Debug Visualization(RViz+Plotjuggler)](https://youtu.be/WpDWq2Yr9X8) 
+
+---
+
 ```markdown
 ## Project Structure
 
