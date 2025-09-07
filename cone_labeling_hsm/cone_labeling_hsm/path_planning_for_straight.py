@@ -885,21 +885,20 @@ class ConesColorSubscriber(Node):
         pts  = [raw_pts[i] for i in mask]
         keys = [raw_keys[i] for i in mask]
 
-        _ = self._build_graph_grid(pts) if len(pts) >= 2 else {}
-
-        # 1) 좌/우 벽 라인 (Greedy) — 시작점 색상 기반 우선 키 선택
-        left_start  = self._get_start_node(pts, START_Y_LEFT)
+        # ─────────────────── [수정된 부분 시작] ───────────────────
+        # 1) 우측 벽 라인만 탐색
         right_start = self._get_start_node(pts, START_Y_RIGHT)
-        left_prefer  = self._choose_prefer_keys(left_start,  keys, LEFT_KEYS)
         right_prefer = self._choose_prefer_keys(right_start, keys, RIGHT_KEYS)
 
         graph = self._build_graph_grid(pts) if len(pts) >= 2 else {}
-        left_path_idx  = self._greedy_path(left_start,  graph, pts, keys, left_prefer)   if graph and left_start  is not None else []
         right_path_idx = self._greedy_path(right_start, graph, pts, keys, right_prefer)  if graph and right_start is not None else []
-        if len(left_path_idx)  < MIN_PATH_LEN: left_path_idx  = []
+        
         if len(right_path_idx) < MIN_PATH_LEN: right_path_idx = []
-        left_poly  = [pts[i] for i in left_path_idx]
         right_poly = [pts[i] for i in right_path_idx]
+
+        # 2) 탐색된 우측 콘을 기반으로 y축 +5.0 오프셋을 적용해 가상의 좌측 콘 생성
+        left_poly = [(x, y + 5.0) for x, y in right_poly]
+        # ─────────────────── [수정된 부분 끝] ─────────────────────
 
         # 폭 추정
         if left_poly and right_poly:
@@ -992,7 +991,6 @@ class ConesColorSubscriber(Node):
 
         return arr, path_msg
 
-
 def main(args=None):
     rclpy.init(args=args)
     node = ConesColorSubscriber()
@@ -1009,4 +1007,3 @@ def main(args=None):
 
 if __name__ == '__main__':
     main()
-
