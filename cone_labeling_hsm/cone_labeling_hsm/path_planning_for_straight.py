@@ -32,6 +32,8 @@ from custom_interface.msg import TrackedConeArray
 # ──────────────────────────────────────────────────────────────────────────────
 # 기본 파라미터
 # ──────────────────────────────────────────────────────────────────────────────
+OFFSET_LEFT = 5.0
+
 INPUT_TOPIC = '/cone/lidar/ukf' #잘안되면 '/cone/lidar/ukf'
 OUTPUT_TOPIC = '/cones_marker_array'
 PATH_OUTPUT_TOPIC = '/local_planned_path'   # ← PurePursuit 가 구독할 토픽
@@ -897,7 +899,7 @@ class ConesColorSubscriber(Node):
         right_poly = [pts[i] for i in right_path_idx]
 
         # 2) 탐색된 우측 콘을 기반으로 y축 +5.0 오프셋을 적용해 가상의 좌측 콘 생성
-        left_poly = [(x, y + 5.0) for x, y in right_poly]
+        left_poly = [(x, y + OFFSET_LEFT) for x, y in right_poly]
         # ─────────────────── [수정된 부분 끝] ─────────────────────
 
         # 폭 추정
