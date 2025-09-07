@@ -16,6 +16,7 @@ find_package(rclpy REQUIRED)                # ★ 파이썬 노드 있을 때도
 find_package(std_msgs REQUIRED)
 find_package(sensor_msgs REQUIRED)
 find_package(geometry_msgs REQUIRED)
+find_package(nav_msgs REQUIRED)
 find_package(visualization_msgs REQUIRED)
 find_package(custom_interface REQUIRED)     # TrackedConeArray 가 들어있는 패키지
 
@@ -34,6 +35,7 @@ install(PROGRAMS
   scripts/visualize_cones.py          # ★새 .py 파일 추가 시 여기에 열거
   scripts/reference_path_planning.py
   scripts/cone_safe_zone.py
+  scripts/right_cone_local_planner.py
   DESTINATION lib/${PROJECT_NAME})
 
 # -------------------- C++ 바이너리 설치 ----------------

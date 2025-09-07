@@ -16,6 +16,7 @@
   <depend>std_msgs</depend>
   <depend>sensor_msgs</depend>
   <depend>geometry_msgs</depend>
+  <depend>nav_msgs</depend>
   <depend>visualization_msgs</depend>
   <depend>custom_interface</depend>      <!-- TrackedConeArray 정의 패키지 -->
 
