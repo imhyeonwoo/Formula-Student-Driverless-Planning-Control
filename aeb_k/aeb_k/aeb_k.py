@@ -17,10 +17,10 @@ qos = QoSProfile(depth=10)
 qos.reliability = ReliabilityPolicy.BEST_EFFORT
 
 # =================== 전역 파라미터 =================== #
-#----- AEB -----#
-AEB_THRESH = 5  # 빨간콘 몇 개 이상일 때 AEB 작동시킬지
-AEB_HOR = 6.0   # AEB 작동 영역의 좌우 반폭(Horizontal)
-AEB_VER = 6.0   # AEB 작동 영역의 앞쪽 길이(Vertical)
+#----- AEB (defaults; can be overridden via params) -----#
+AEB_THRESH = 10   # 빨간콘 몇 개 이상일 때 AEB 작동시킬지
+AEB_HOR = 6.0     # AEB 작동 영역의 좌우 반폭(Horizontal)
+AEB_VER = 9.0     # AEB 작동 영역의 앞쪽 길이(Vertical)
 
 #=====================================================#
 
@@ -28,12 +28,20 @@ class AEB(Node):
     def __init__(self):
         super().__init__('AEB_Determine_Node')
 
-        ###### Subscriber ######
-        # self.red_sub = self.create_subscription(
-        #     TrackedConeArray, '/cone/fused/ukf', self.red_callback, qos)
+        ###### Parameters ######
+        self.declare_parameter('topic', '/cone/fused/ukf')
+        self.declare_parameter('aeb_thresh', AEB_THRESH)
+        self.declare_parameter('aeb_hor', AEB_HOR)
+        self.declare_parameter('aeb_ver', AEB_VER)
 
+        self.topic = self.get_parameter('topic').get_parameter_value().string_value
+        self.aeb_thresh = int(self.get_parameter('aeb_thresh').get_parameter_value().integer_value)
+        self.aeb_hor = float(self.get_parameter('aeb_hor').get_parameter_value().double_value)
+        self.aeb_ver = float(self.get_parameter('aeb_ver').get_parameter_value().double_value)
+
+        ###### Subscriber ######
         self.red_sub = self.create_subscription(
-            TrackedConeArray, '/cone/fused', self.red_callback, qos)
+            TrackedConeArray, self.topic, self.red_callback, qos)
         
 
         ###### Publisher ######
@@ -67,11 +75,16 @@ class AEB(Node):
     def determine_aeb(self, cone: List[Tuple[float, float, float]]):
         n_red = 0
         for x, y, z in cone:
-            if 0.0 <= x <= AEB_VER and -AEB_HOR <= y <= AEB_HOR:
+            if 0.0 <= x <= self.aeb_ver and -self.aeb_hor <= y <= self.aeb_hor:
                 n_red += 1
         aebmsg = UInt8()
-        aebmsg.data = 1 if n_red > AEB_THRESH else 0
+        # Trigger when count meets or exceeds threshold
+        aebmsg.data = 1 if n_red >= self.aeb_thresh else 0
         self.aeb_pub.publish(aebmsg)
+        # Debug (throttled) — shows ROI count and output
+        if (self.get_clock().now().nanoseconds // 1_000_000_000) % 1 == 0:
+            self.get_logger().debug(
+                f"AEB ROI count={n_red} (th={self.aeb_thresh}) -> {aebmsg.data}")
         return aebmsg.data
 
     #=======================
@@ -102,10 +115,10 @@ class AEB(Node):
         marker.id = 8
         marker.type = Marker.CUBE
         marker.action = Marker.ADD
-        marker.scale.x = AEB_VER
-        marker.scale.y = 2 * AEB_HOR
+        marker.scale.x = self.aeb_ver
+        marker.scale.y = 2 * self.aeb_hor
         marker.scale.z = 0.1
-        marker.pose.position.x = AEB_VER / 2.0
+        marker.pose.position.x = self.aeb_ver / 2.0
         marker.pose.position.y = 0.0
         marker.pose.position.z = 0.1
         marker.pose.orientation.w = 1.0
