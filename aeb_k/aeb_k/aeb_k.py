@@ -29,7 +29,7 @@ class AEB(Node):
         super().__init__('AEB_Determine_Node')
 
         ###### Parameters ######
-        self.declare_parameter('topic', '/cone/fused/ukf')
+        self.declare_parameter('topic', '/cone/fused')
         self.declare_parameter('aeb_thresh', AEB_THRESH)
         self.declare_parameter('aeb_hor', AEB_HOR)
         self.declare_parameter('aeb_ver', AEB_VER)

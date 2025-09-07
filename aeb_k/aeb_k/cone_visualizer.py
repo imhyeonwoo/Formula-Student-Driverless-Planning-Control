@@ -21,7 +21,7 @@ class ConeVisualizer(Node):
         qos.reliability = ReliabilityPolicy.BEST_EFFORT
 
         # Parameters
-        self.declare_parameter('topic', '/cone/fused/ukf')
+        self.declare_parameter('topic', '/cone/fused')
         self.declare_parameter('frame_id_override', '')  # if non-empty, override incoming frame
         self.declare_parameter('scale', 0.3)             # sphere diameter
         self.declare_parameter('alpha', 0.9)             # marker alpha
