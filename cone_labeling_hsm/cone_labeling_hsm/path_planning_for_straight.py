@@ -32,7 +32,7 @@ from custom_interface.msg import TrackedConeArray
 # ──────────────────────────────────────────────────────────────────────────────
 # 기본 파라미터
 # ──────────────────────────────────────────────────────────────────────────────
-INPUT_TOPIC = '/cone/fused/ukf' #잘안되면 '/cone/lidar/ukf'
+INPUT_TOPIC = '/cone/lidar/ukf' #잘안되면 '/cone/lidar/ukf'
 OUTPUT_TOPIC = '/cones_marker_array'
 PATH_OUTPUT_TOPIC = '/local_planned_path'   # ← PurePursuit 가 구독할 토픽
 USE_HEADER_FRAME = True
