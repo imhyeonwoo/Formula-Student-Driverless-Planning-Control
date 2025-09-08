@@ -1,0 +1,34 @@
+path_sampler:
+  ros__parameters:
+    # Keep the same curvature computation; speed is constant elsewhere
+    sample_dist: 0.5
+    ignore_front_n: 5
+    curv_avg_window: 5
+    rep_window_m: 15.0
+    rep_method: "percentile"
+    rep_percentile: 90.0
+
+speed_zone_planner:
+  ros__parameters:
+    # I/O topics
+    topic_in: "/sp/rep_curvature"
+    topic_out: "/cmd/speed"
+
+    # Publish rate (ramp calculation)
+    publish_rate_hz: 20.0
+
+    # Zone thresholds (kept, but irrelevant since speeds are equal)
+    thr_hm_enter: 0.12
+    thr_ml_enter: 0.22
+    hysteresis_factor: 0.8
+    min_hold_sec: 0.7
+
+    # Constant target speeds
+    v_high: 13.0
+    v_mid: 8.0
+    v_low: 3.0
+
+    # Ramp limits (adjust if you want quicker convergence to 1.0)
+    a_acc_max: 2.0
+    a_dec_max: 3.0
+
