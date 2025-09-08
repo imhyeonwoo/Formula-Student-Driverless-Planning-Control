@@ -26,6 +26,7 @@ class PathSampler(Node):
         self.sample_dist = self.get_parameter('sample_dist').value
 
         # 시작부(base_link 연결부) 곡률 무시 개수
+        # /local_planned_path의 시작부는 잡음이 심하므로(∵강제로 잇기 때문) 곡률 계산에서 무시
         self.declare_parameter('ignore_front_n', 5)
         self.ignore_front_n = self.get_parameter('ignore_front_n').value
 
