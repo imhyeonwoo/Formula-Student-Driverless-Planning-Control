@@ -27,12 +27,12 @@ def generate_launch_description():
         ),
         # Optional constant publishers for /cmd/speed and /cmd/rpm
         # 상수 속도 안 박을거면 이 노드 부분 주석 처리하기!!!!!!
-        Node(
-            package='pure_pursuit',
-            executable='constant_cmd_publisher',
-            name='constant_cmd_publisher',
-            output='screen',
-            parameters=[param_file],
-            condition=IfCondition(use_constant_cmd),
-        ),
+        # Node(
+        #     package='pure_pursuit',
+        #     executable='constant_cmd_publisher',
+        #     name='constant_cmd_publisher',
+        #     output='screen',
+        #     parameters=[param_file],
+        #     condition=IfCondition(use_constant_cmd),
+        # ),
     ])
