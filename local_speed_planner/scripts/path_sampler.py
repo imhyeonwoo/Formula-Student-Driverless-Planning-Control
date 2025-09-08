@@ -2,6 +2,7 @@
 import rclpy
 from rclpy.node import Node
 from nav_msgs.msg import Path
+from std_msgs.msg import Float32
 from visualization_msgs.msg import Marker, MarkerArray
 from geometry_msgs.msg import Point
 import copy
@@ -20,6 +21,9 @@ class PathSampler(Node):
         self.pub_markers = self.create_publisher(
             MarkerArray, '/sp/curvature', 10)
         # 속도 상한 시각화는 별도 노드에서 처리 예정
+        # 대표 곡률(Reference Curvature) 퍼블리셔
+        self.pub_rep_kappa = self.create_publisher(
+            Float32, '/sp/rep_curvature', 10)
 
         # 파라미터: 샘플 간격 (m)
         self.declare_parameter('sample_dist', 0.5)
@@ -33,6 +37,14 @@ class PathSampler(Node):
         # 곡률 평균(평활화) 윈도우 크기 (샘플 수, 홀수 권장)
         self.declare_parameter('curv_avg_window', 5)
         self.curv_avg_window = max(1, int(self.get_parameter('curv_avg_window').value))
+
+        # 대표 곡률 산출 파라미터
+        self.declare_parameter('rep_window_m', 15.0)   # m 단위, 전방 집계 구간 길이
+        self.declare_parameter('rep_method', 'percentile')  # 'percentile'|'mean'|'max'
+        self.declare_parameter('rep_percentile', 90.0)      # 0~100
+        self.rep_window_m = float(self.get_parameter('rep_window_m').value)
+        self.rep_method = str(self.get_parameter('rep_method').value)
+        self.rep_percentile = float(self.get_parameter('rep_percentile').value)
 
         # 속도 상한 관련 파라미터는 별도 노드에서 관리
 
@@ -138,12 +150,45 @@ class PathSampler(Node):
 
         self.pub_markers.publish(markers)
 
+        # --- 대표 곡률 계산 및 퍼블리시 ---
+        rep_val = self._compute_representative_kappa(kappa_smooth, self.sample_dist)
+        rep_msg = Float32()
+        rep_msg.data = float(rep_val)
+        self.pub_rep_kappa.publish(rep_msg)
+
         # 속도 상한 계산/시각화는 제거 (별도 노드 예정)
 
     def _frange(self, start, stop, step):
         while start <= stop:
             yield start
             start += step
+
+    def _compute_representative_kappa(self, kappa_list, ds):
+        N = len(kappa_list)
+        if N == 0:
+            return 0.0
+        # 시작부 무시 구간 이후부터 집계
+        start_i = min(max(int(self.ignore_front_n), 1), N - 1)
+        # 전방 윈도우 크기(샘플 수)
+        window_n = max(1, int(self.rep_window_m / max(ds, 1e-6)))
+        end_i = min(N, start_i + window_n)
+        segment = kappa_list[start_i:end_i]
+        if not segment:
+            segment = kappa_list[start_i:]
+        if not segment:
+            return 0.0
+
+        method = self.rep_method.lower()
+        if method == 'mean':
+            return sum(segment) / len(segment)
+        elif method == 'max':
+            return max(segment)
+        else:
+            # percentile (기본)
+            p = max(0.0, min(100.0, self.rep_percentile))
+            idx = int(round((p / 100.0) * (len(segment) - 1)))
+            sorted_seg = sorted(segment)
+            return sorted_seg[idx]
 
 
 def main(args=None):
