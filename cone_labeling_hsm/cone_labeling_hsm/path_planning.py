@@ -32,7 +32,8 @@ from custom_interface.msg import TrackedConeArray
 # ──────────────────────────────────────────────────────────────────────────────
 # 기본 파라미터
 # ──────────────────────────────────────────────────────────────────────────────
-INPUT_TOPIC = '/cone/lidar/ukf' #'/cone/fused/ukf'
+INPUT_TOPIC = '/cone/lidar/ukf'   # UKF 적용 색상 x 콘 토픽
+# INPUT_TOPIC = '/cone/fused/ukf'   # UKF 적용 색상 o 콘 토픽
 OUTPUT_TOPIC = '/cones_marker_array'
 PATH_OUTPUT_TOPIC = '/local_planned_path'   # ← PurePursuit 가 구독할 토픽
 USE_HEADER_FRAME = True
@@ -92,11 +93,11 @@ MID_DOT_SCALE = 0.18
 # [단측/헝가리안 실패 대비]
 DEFAULT_HALF_WIDTH = 2.8
 HALF_WIDTH_MINMAX = (1.0, 4.0)
-RESAMPLE_STEP = 1.2
+RESAMPLE_STEP = 1.2     # 좌/우 콘으로 구성된 벽들의 리샘플링 간격
 PAIR_MIN_KEEP = 3
 
 # ── 중앙 경로 간격 균질화/브릿지 파라미터 ─────────────────────────────
-CENTER_STEP = 0.6
+CENTER_STEP = 0.6       # /local_planned_path의 등간격 샘플링 간격
 CENTER_EDGE_LEN_TH = 3.0
 GAP_BRIDGE_TH = 1.2
 GAP_SPLINE_TH = 3.5
