@@ -1,0 +1,139 @@
+#!/usr/bin/env python3
+import rclpy
+from rclpy.node import Node
+from std_msgs.msg import Float32
+
+
+class SpeedZonePlanner(Node):
+    def __init__(self):
+        super().__init__('speed_zone_planner')
+
+        # Parameters
+        self.declare_parameter('topic_in', '/sp/rep_curvature')
+        self.declare_parameter('topic_out', '/cmd/speed')
+        self.declare_parameter('publish_rate_hz', 20.0)
+
+        # Zone thresholds (curvature [1/m])
+        # Increasing kappa means tighter curve -> lower speed
+        self.declare_parameter('thr_hm_enter', 0.12)  # HIGH->MID enter
+        self.declare_parameter('thr_ml_enter', 0.22)  # MID->LOW enter
+        self.declare_parameter('hysteresis_factor', 0.8)  # exit = enter * factor
+        self.declare_parameter('min_hold_sec', 0.7)
+
+        # Zone speeds (m/s)
+        self.declare_parameter('v_high', 10.0)
+        self.declare_parameter('v_mid', 7.0)
+        self.declare_parameter('v_low', 4.0)
+
+        # Ramp limits
+        self.declare_parameter('a_acc_max', 2.0)  # m/s^2
+        self.declare_parameter('a_dec_max', 3.0)  # m/s^2
+
+        # Load parameters
+        self.topic_in = self.get_parameter('topic_in').value
+        self.topic_out = self.get_parameter('topic_out').value
+        self.publish_rate_hz = float(self.get_parameter('publish_rate_hz').value)
+
+        self.thr_hm_enter = float(self.get_parameter('thr_hm_enter').value)
+        self.thr_ml_enter = float(self.get_parameter('thr_ml_enter').value)
+        self.hyst = float(self.get_parameter('hysteresis_factor').value)
+        self.min_hold_sec = float(self.get_parameter('min_hold_sec').value)
+
+        self.thr_hm_exit = self.thr_hm_enter * self.hyst
+        self.thr_ml_exit = self.thr_ml_enter * self.hyst
+
+        self.v_high = float(self.get_parameter('v_high').value)
+        self.v_mid = float(self.get_parameter('v_mid').value)
+        self.v_low = float(self.get_parameter('v_low').value)
+
+        self.a_acc_max = float(self.get_parameter('a_acc_max').value)
+        self.a_dec_max = float(self.get_parameter('a_dec_max').value)
+
+        # State
+        self.last_kappa = None
+        self.zone = None  # 'HIGH'|'MID'|'LOW'
+        self.last_zone_change = self.get_clock().now()
+        self.speed_cmd = 0.0
+
+        # ROS I/O
+        self.sub = self.create_subscription(Float32, self.topic_in, self.on_kappa, 10)
+        self.pub = self.create_publisher(Float32, self.topic_out, 10)
+
+        period = 1.0 / max(self.publish_rate_hz, 1.0)
+        self.timer = self.create_timer(period, self.on_timer)
+
+        self.get_logger().info(
+            f"SpeedZonePlanner started: in={self.topic_in}, out={self.topic_out}, rate={self.publish_rate_hz} Hz")
+
+    def on_kappa(self, msg: Float32):
+        self.last_kappa = float(msg.data)
+
+        # Enforce minimum hold time
+        now = self.get_clock().now()
+        dt_since_change = (now - self.last_zone_change).nanoseconds * 1e-9
+
+        new_zone = self.zone
+        k = self.last_kappa
+
+        if self.zone is None:
+            # Initial selection
+            if k >= self.thr_ml_enter:
+                new_zone = 'LOW'
+            elif k >= self.thr_hm_enter:
+                new_zone = 'MID'
+            else:
+                new_zone = 'HIGH'
+        else:
+            if dt_since_change >= self.min_hold_sec:
+                if self.zone == 'HIGH':
+                    if k >= self.thr_hm_enter:
+                        new_zone = 'MID'
+                elif self.zone == 'MID':
+                    if k >= self.thr_ml_enter:
+                        new_zone = 'LOW'
+                    elif k <= self.thr_hm_exit:
+                        new_zone = 'HIGH'
+                elif self.zone == 'LOW':
+                    if k <= self.thr_ml_exit:
+                        new_zone = 'MID'
+
+        if new_zone != self.zone:
+            self.zone = new_zone
+            self.last_zone_change = now
+            # self.get_logger().info(f"Zone -> {self.zone} (kappa={k:.3f})")
+
+    def on_timer(self):
+        # Determine target speed by zone
+        if self.zone == 'HIGH':
+            target = self.v_high
+        elif self.zone == 'MID':
+            target = self.v_mid
+        elif self.zone == 'LOW':
+            target = self.v_low
+        else:
+            # No data yet
+            return
+
+        # Ramp towards target with accel/deccl limits
+        dt = 1.0 / max(self.publish_rate_hz, 1.0)
+        if target > self.speed_cmd:
+            self.speed_cmd = min(self.speed_cmd + self.a_acc_max * dt, target)
+        else:
+            self.speed_cmd = max(self.speed_cmd - self.a_dec_max * dt, target)
+
+        msg = Float32()
+        msg.data = float(self.speed_cmd)
+        self.pub.publish(msg)
+
+
+def main(args=None):
+    rclpy.init(args=args)
+    node = SpeedZonePlanner()
+    rclpy.spin(node)
+    node.destroy_node()
+    rclpy.shutdown()
+
+
+if __name__ == '__main__':
+    main()
+

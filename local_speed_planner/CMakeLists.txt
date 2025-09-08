@@ -27,7 +27,13 @@ include_directories(include)
 # ----- Python 노드 설치 -----
 install(PROGRAMS
   scripts/path_sampler.py
+  scripts/speed_zone_planner.py
   DESTINATION lib/${PROJECT_NAME}
+)
+
+# Install launch and config directories
+install(DIRECTORY launch config
+  DESTINATION share/${PROJECT_NAME}
 )
 
 ament_package()

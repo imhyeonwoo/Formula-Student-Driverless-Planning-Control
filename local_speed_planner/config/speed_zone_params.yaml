@@ -1,0 +1,40 @@
+path_sampler:
+  ros__parameters:
+    # Path sampling / curvature
+    sample_dist: 0.5
+    ignore_front_n: 5
+    curv_avg_window: 5
+
+    # Representative curvature window and method
+    rep_window_m: 15.0
+    rep_method: "percentile"   # options: percentile | mean | max
+    rep_percentile: 90.0
+    # mean 방식 : segment 안의 곡률 값들을 모두 더한 뒤 그 개수로 나누어 평균을 구함
+    # max 방식 : segment 안의 곡률 값들 중에서 가장 큰 값을 선택함
+    # percentile 방식 : segment 안의 곡률 값들을 오름차순으로 정렬한 뒤, 지정된 백분위수에 해당하는 값을 선택함
+    #                  예를 들어, 90번째 백분위수는 전체 값들 중에서 상위 10%에 해당하는 값을 의미함
+
+speed_zone_planner:
+  ros__parameters:
+    # I/O topics
+    topic_in: "/sp/rep_curvature"
+    topic_out: "/cmd/speed"
+
+    # Publish rate (for ramping)
+    publish_rate_hz: 20.0
+
+    # Curvature thresholds with hysteresis
+    thr_hm_enter: 0.12        # HIGH -> MID enter threshold
+    thr_ml_enter: 0.22        # MID  -> LOW enter threshold
+    hysteresis_factor: 0.8    # exit threshold = enter * factor
+    min_hold_sec: 0.7         # minimum zone hold time
+
+    # Zone target speeds (m/s)
+    v_high: 10.0
+    v_mid: 7.0
+    v_low: 4.0
+
+    # Ramp limits
+    a_acc_max: 2.0
+    a_dec_max: 3.0
+
