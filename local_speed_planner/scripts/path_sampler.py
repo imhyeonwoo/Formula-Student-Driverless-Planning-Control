@@ -189,6 +189,12 @@ class PathSampler(Node):
             idx = int(round((p / 100.0) * (len(segment) - 1)))
             sorted_seg = sorted(segment)
             return sorted_seg[idx]
+        """
+        mean 방식 : segment 안의 곡률 값들을 모두 더한 뒤 그 개수로 나누어 평균을 구함
+        max 방식 : segment 안의 곡률 값들 중에서 가장 큰 값을 선택함
+        percentile 방식 : segment 안의 곡률 값들을 오름차순으로 정렬한 뒤, 지정된 백분위수에 해당하는 값을 선택함
+        예를 들어, 90번째 백분위수는 전체 값들 중에서 상위 10%에 해당하는 값을 의미함
+        """
 
 
 def main(args=None):
