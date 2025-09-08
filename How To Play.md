@@ -112,3 +112,8 @@
  ros2 launch pure_pursuit adaptive_pure_pursuit.launch.py
  ```
 ---
+
+## 8. AEB Detection
+ ```bash
+ ros2 launch aeb_k aeb_k_with_visualizer.launch.py
+ ```
