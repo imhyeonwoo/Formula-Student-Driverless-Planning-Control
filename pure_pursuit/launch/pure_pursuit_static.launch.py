@@ -36,12 +36,12 @@ def generate_launch_description():
 
         # Optional constant publishers for /cmd/speed and /cmd/rpm
         # 상수 속도 노드 실행 유무는 use_constant_cmd로 제어 (adaptive와 동일)
-        Node(
-            package='pure_pursuit',
-            executable='constant_cmd_publisher',
-            name='constant_cmd_publisher',
-            output='screen',
-            parameters=[params_file],
-            condition=IfCondition(use_constant_cmd),
-        ),
+        # Node(
+        #     package='pure_pursuit',
+        #     executable='constant_cmd_publisher',
+        #     name='constant_cmd_publisher',
+        #     output='screen',
+        #     parameters=[params_file],
+        #     condition=IfCondition(use_constant_cmd),
+        # ),
     ])

@@ -16,11 +16,11 @@ def generate_launch_description():
             default_value=default_params,
             description='Path to the parameter YAML file'
         ),
-        Node(
-            package='pure_pursuit',
-            executable='pure_pursuit_dynamic',
-            name='pure_pursuit_dynamic',
-            output='screen',
-            parameters=[params_file],
-        )
+        # Node(
+        #     package='pure_pursuit',
+        #     executable='pure_pursuit_dynamic',
+        #     name='pure_pursuit_dynamic',
+        #     output='screen',
+        #     parameters=[params_file],
+        # )
     ])
