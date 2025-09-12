@@ -3,15 +3,18 @@
 A collection of ROS2 packages dedicated to **Path/Speed Planning and Tracking** for a custom-built EV Autonomous Vehicle.  
 This repository manages my personal work for the **Planning / (High-Level)Control Team** in the Student Mobility Competition (Konkuk University - Team K.A.I.).
 
-🚗 **Watch the Demo**  
+ **<img src="https://upload.wikimedia.org/wikipedia/commons/4/42/YouTube_icon_%282013-2017%29.png" alt="YouTube" width="20" style="vertical-align:middle;">
+Watch the Demo**  
 - [On-road Test](https://youtube.com/shorts/4p9Xr07viQY)  
 - [Debug Visualization(RViz+Plotjuggler)](https://youtu.be/WpDWq2Yr9X8) 
 
 ---
 
-```markdown
-## Project Structure
+<details>
+<summary><b>📁 Project Structure</b></summary>
 
+
+```text
 Planning/
 ├── cone_labeling_k/ # Potential Field-based Planning
 │   └── cone_labeling_k
@@ -76,6 +79,8 @@ Planning/
 │
 └ How To Play.txt # Contains How to Run My Packages
 ```
+
+</details>
 
 ---
 
