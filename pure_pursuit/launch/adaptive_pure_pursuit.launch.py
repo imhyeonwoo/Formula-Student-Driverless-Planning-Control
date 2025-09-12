@@ -15,7 +15,7 @@ def generate_launch_description():
 
     return LaunchDescription([
         DeclareLaunchArgument(
-            'use_constant_cmd', default_value='true',
+            'use_constant_cmd', default_value='false',
             description='Launch constant_cmd_publisher to publish /cmd/speed and /cmd/rpm'
         ),
         Node(
