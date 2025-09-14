@@ -177,8 +177,8 @@ ros2 launch pure_pursuit adaptive_pure_pursuit.launch.py
 ### Several Attempts for Better Planning and Tracking
 
 <p align="center">
-  <img src="docs/images/9adaptive pure pursuit.gif" width="70%"/><br>
-  <b>Adaptive Pure Pursuit</b>
+  <img src="docs/images/9 adaptive pure pursuit.gif" width="70%"/><br>
+  <span style="font-size:20px; font-weight:bold;">Adaptive Pure Pursuit</span>
 </p>
 
 <p>
@@ -189,9 +189,7 @@ ros2 launch pure_pursuit adaptive_pure_pursuit.launch.py
 </p>
 
 <ul>
-  <li><b>Mint Marker:</b> Look-Ahead Point of Standard Pure Pursuit</li>
   <li><b>Pink Marker:</b> Look-Ahead Point of Adaptive Pure Pursuit</li>
-  <li><b>Yellow Arrow:</b> Vehicle Heading Direction based on Standard Pure Pursuit</li>
 <li><b>Orange Arrow:</b> Vehicle Heading Direction based on Adaptive Pure Pursuit</li>
 </ul>
 
@@ -206,7 +204,7 @@ ros2 launch pure_pursuit adaptive_pure_pursuit.launch.py
   <img src="docs/images/attempts/potential field1.gif" width="45%" />
   <img src="docs/images/attempts/potential field2.gif" width="45%" />
   <br>
-  <b>Potential Field-Based Local Path Planning</b>
+  <span style="font-size:20px; font-weight:bold;">Potential Field-Based Local Path Planning</span>
 </div>
 
 <p>
@@ -226,11 +224,13 @@ ros2 launch pure_pursuit adaptive_pure_pursuit.launch.py
   <li><b>Blue / Yellow Spheres:</b> Left and Right cones respectively</li>
 </ul>
 
+---
+
 
 <div align="center">
   <img src="docs/images/attempts/greedy path planning.gif" width="70%" />
   <br>
-  <b>Greedy Graph-Guided Local Path Planning</b>
+  <span style="font-size:20px; font-weight:bold;">Greedy Graph-Guided Local Path Planning</span>
 </div>
 
 <p>
@@ -271,6 +271,7 @@ ros2 launch pure_pursuit adaptive_pure_pursuit.launch.py
 - [MathWorks Blog: Path Planning for Formula Student Driverless Cars](https://blogs.mathworks.com/student-lounge/2022/10/03/path-planning-for-formula-student-driverless-cars-using-delaunay-triangulation/?from=kr)
 - [u-blox GitHub - RTKLIB, GNSS tools](https://github.com/u-blox)
 - [u-blox F9P Interface Description (Documentation)](https://content.u-blox.com/sites/default/files/documents/u-blox-F9-HPG-1.32_InterfaceDescription_UBX-22008968.pdf)
+- [Accurate Path Tracking by Adjusting Look Ahead Point in Pure Pursuit Method](https://www.youtube.com/watch?v=1nRdlEsYopY)
 ---
 
 ## Contributions & Contact
