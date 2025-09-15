@@ -75,7 +75,7 @@ pure_pursuit_adaptive:
     color_pl_b: 0.80
 
     color_tan_r: 1.00
-    color_tan_g: 0.85
+    color_tan_g: 0.00
     color_tan_b: 0.10
 
     color_vec_r: 0.00
