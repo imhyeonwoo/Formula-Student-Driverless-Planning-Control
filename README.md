@@ -1,7 +1,9 @@
 #  StudentMobilityCompetition-Planning-Control
 
-A collection of ROS2 packages dedicated to **Path/Speed Planning and Tracking** for a custom-built EV Autonomous Vehicle.  
-This repository manages my personal work for the **Planning / (High-Level)Control Team** in the Student Mobility Competition (Konkuk University - Team K.A.I.).
+This repository contains my personal work for the **Planning & High-Level Control Team**  in the Student Mobility Competition (Team K.A.I., Konkuk University).
+
+It implements a full ROS2 stack that plans **global paths from GPS data**,  generates **local paths from traffic cones**, and tracks them using **Pure Pursuit**, enabling our custom-built EV to drive autonomously on cone-marked tracks.
+
 
  **<img src="https://upload.wikimedia.org/wikipedia/commons/4/42/YouTube_icon_%282013-2017%29.png" alt="YouTube" width="25" style="vertical-align:middle;">
 Watch the Demo**  
@@ -77,7 +79,7 @@ Planning/
 │       ├── pure_pursuit_dynamic.cpp
 │       └── pure_pursuit_static.cpp
 │
-└ How To Play.txt # Contains How to Run My Packages
+└ How To Play.md # Contains How to Run My Packages
 ```
 
 </details>
