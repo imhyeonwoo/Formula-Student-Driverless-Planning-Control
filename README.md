@@ -5,7 +5,7 @@ This repository contains my personal work for the **Planning & High-Level Contro
 It implements a full ROS2 stack that plans **global paths from GPS data**,  generates **local paths from traffic cones**, and tracks them using **Pure Pursuit**, enabling our custom-built EV to drive autonomously on cone-marked tracks.
 
 
- **<img src="https://upload.wikimedia.org/wikipedia/commons/4/42/YouTube_icon_%282013-2017%29.png" alt="YouTube" width="25" style="vertical-align:middle;">
+ **<img src="https://upload.wikimedia.org/wikipedia/commons/4/42/YouTube_icon_%282013-2017%29.png" alt="YouTube" width="20" style="vertical-align:middle;">
 Watch the Demo**  
 - [On-road Test](https://youtube.com/shorts/4p9Xr07viQY)  
 - [Debug Visualization(RViz+Plotjuggler)](https://youtu.be/WpDWq2Yr9X8) 
@@ -129,50 +129,62 @@ ros2 launch speed_planner simple_speed_planner.launch.py
 ros2 launch pure_pursuit adaptive_pure_pursuit.launch.py
 ```
 
-### Demo Video
+---
+
+### 📹 Demo Video (Main)
 
 <table>
   <tr>
     <td align="center">
-      <img src="docs/images/1global_pathplanning.gif" width="45%"/><br>
-      <b>1. Global Path Planning</b>
-    </td>
-    <td align="center">
-      <img src="docs/images/2globalcones_and_roi.gif" width="45%"/><br>
-      <b>2. Global Cones and ROI(Sim)</b>
-    </td>
-  </tr>
-  <tr>
-    <td align="center">
       <img src="docs/images/3rightleft_classification_using_frenet.gif" width="45%"/><br>
-      <b>3. Right/Left Classification using Frenet</b>
+      <b>1. Right/Left Classification (Frenet + K-D Tree)</b>
     </td>
     <td align="center">
       <img src="docs/images/4delaunay_triangulation.gif" width="45%"/><br>
-      <b>4. Delaunay Triangulation</b>
-    </td>
-  </tr>
-  <tr>
-    <td align="center">
-      <img src="docs/images/5interpolation_sampling.gif" width="45%"/><br>
-      <b>5. Interpolation and Sampling</b>
-    </td>
-    <td align="center">
-      <img src="docs/images/6cone_radius_safe_zone.gif" width="45%"/><br>
-      <b>6. Obstacle Radius and Visualize Safe Zone</b>
+      <b>2. Delaunay Triangulation</b>
     </td>
   </tr>
   <tr>
     <td align="center">
       <img src="docs/images/7local_speed_planning.gif" width="45%"/><br>
-      <b>7. Local Speed Planning</b>
+      <b>3. Local Speed Planning</b>
     </td>
     <td align="center">
       <img src="docs/images/8pure_pursuit.gif" width="45%"/><br>
-      <b>8. Path Tracking(Pure Pursuit)</b>
+      <b>4. Path Tracking (Pure Pursuit)</b>
     </td>
   </tr>
 </table>
+
+<details>
+<summary><b>📁 View More (4 Additional Steps)</b></summary>
+
+<table>
+  <tr>
+    <td align="center">
+      <img src="docs/images/1global_pathplanning.gif" width="45%"/><br>
+      <b>5. Global Path Planning</b>
+    </td>
+    <td align="center">
+      <img src="docs/images/2globalcones_and_roi.gif" width="45%"/><br>
+      <b>6. Global Cones and ROI (Sim)</b>
+    </td>
+  </tr>
+  <tr>
+    <td align="center">
+      <img src="docs/images/5interpolation_sampling.gif" width="45%"/><br>
+      <b>7. Interpolation & Sampling</b>
+    </td>
+    <td align="center">
+      <img src="docs/images/6cone_radius_safe_zone.gif" width="45%"/><br>
+      <b>8. Obstacle Radius & Safe Zone</b>
+    </td>
+  </tr>
+</table>
+
+</details>
+
+
 
 ---
 
