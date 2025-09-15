@@ -11,6 +11,13 @@ class SpeedZonePlanner(Node):
         # Parameters
         self.declare_parameter('topic_in', '/sp/rep_curvature')
         self.declare_parameter('topic_out', '/cmd/speed')
+        # New: RPM publishing params
+        self.declare_parameter('rpm_topic', '/cmd/rpm')
+        self.declare_parameter('publish_rpm', True)
+        # Conversion: v[m/s] = RPM_motor * rpm_divisor  =>  RPM = v / rpm_divisor
+        # Derived from: RPM_wheel = RPM_motor / 4.6, circumference = pi * 0.47 m
+        # v = RPM_motor * (1/4.6) * (1/60) * (pi * 0.47) ≈ RPM_motor * 0.00535 [m/s]
+        self.declare_parameter('rpm_divisor', 0.00535)
         self.declare_parameter('publish_rate_hz', 20.0)
 
         # Zone thresholds (curvature [1/m])
@@ -33,6 +40,10 @@ class SpeedZonePlanner(Node):
         self.topic_in = self.get_parameter('topic_in').value
         self.topic_out = self.get_parameter('topic_out').value
         self.publish_rate_hz = float(self.get_parameter('publish_rate_hz').value)
+        # RPM params
+        self.rpm_topic = self.get_parameter('rpm_topic').value
+        self.publish_rpm = bool(self.get_parameter('publish_rpm').value)
+        self.rpm_divisor = float(self.get_parameter('rpm_divisor').value)
 
         self.thr_hm_enter = float(self.get_parameter('thr_hm_enter').value)
         self.thr_ml_enter = float(self.get_parameter('thr_ml_enter').value)
@@ -58,12 +69,15 @@ class SpeedZonePlanner(Node):
         # ROS I/O
         self.sub = self.create_subscription(Float32, self.topic_in, self.on_kappa, 10)
         self.pub = self.create_publisher(Float32, self.topic_out, 10)
+        self.pub_rpm = None
+        if self.publish_rpm:
+            self.pub_rpm = self.create_publisher(Float32, self.rpm_topic, 10)
 
         period = 1.0 / max(self.publish_rate_hz, 1.0)
         self.timer = self.create_timer(period, self.on_timer)
 
         self.get_logger().info(
-            f"SpeedZonePlanner started: in={self.topic_in}, out={self.topic_out}, rate={self.publish_rate_hz} Hz")
+            f"SpeedZonePlanner started: in={self.topic_in}, out_speed={self.topic_out}, out_rpm={self.rpm_topic if self.publish_rpm else 'disabled'}, rate={self.publish_rate_hz} Hz")
 
     def on_kappa(self, msg: Float32):
         self.last_kappa = float(msg.data)
@@ -121,9 +135,19 @@ class SpeedZonePlanner(Node):
         else:
             self.speed_cmd = max(self.speed_cmd - self.a_dec_max * dt, target)
 
+        # Publish speed (m/s)
         msg = Float32()
         msg.data = float(self.speed_cmd)
         self.pub.publish(msg)
+
+        # Optionally publish RPM derived from speed
+        if self.publish_rpm and self.pub_rpm is not None:
+            rpm = 0.0
+            if self.rpm_divisor > 0.0:
+                rpm = float(self.speed_cmd) / self.rpm_divisor
+            rpm_msg = Float32()
+            rpm_msg.data = float(rpm)
+            self.pub_rpm.publish(rpm_msg)
 
 
 def main(args=None):
@@ -136,4 +160,3 @@ def main(args=None):
 
 if __name__ == '__main__':
     main()
-

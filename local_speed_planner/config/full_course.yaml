@@ -19,6 +19,10 @@ speed_zone_planner:
     # I/O topics
     topic_in: "/sp/rep_curvature"
     topic_out: "/cmd/speed"
+    # New: also publish RPM derived from speed
+    rpm_topic: "/cmd/rpm"
+    publish_rpm: true
+    rpm_divisor: 0.00535   # v[m/s] ≈ RPM * 0.00535 → RPM = v / 0.00535
 
     # Publish rate (for ramping)
     publish_rate_hz: 20.0
@@ -37,4 +41,3 @@ speed_zone_planner:
     # Ramp limits
     a_acc_max: 2.0
     a_dec_max: 3.0
-
