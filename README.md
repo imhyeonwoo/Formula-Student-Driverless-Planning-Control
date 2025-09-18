@@ -86,6 +86,24 @@ Planning/
 
 ---
 
+<details>
+  <summary><b><span style="font-size: 1.4em">📈 Ideal rqt graph</span></b></summary>
+
+  <img src="docs/images/Planning_rqt-graph.png" alt="Planning rqt graph" />
+
+  
+  Flow Summary (Concise):
+
+  - **Cone perception** → Local path: /cone/* → /cones_color_subscriber → /local_planned_path, /cones_marker_array (RViz shows /cones/markers).
+  - **AEB decision**: /cones_color_subscriber → /AEB_Determination_Node → /aeb_roi, /aeb.
+  - **Curvature/Speed planning**: /local_planned_path → /path_sampler → /sp/rep_curvature → /speed_zone_planner → /cmd/speed, /cmd/rpm.
+  - **Path tracking control**: /pure_pursuit_adaptive ⟵ /local_planned_path, /current_speed → /cmd/steer (+ /pure_pursuit/* debug topics).
+  - **HUD/Visualization**: /hud_overlay_node ⟵ /cmd/*, /odometry/filtered, /pure_pursuit/* → /hud/overlay_text, /hud/aeb_overlay, /current_kmh; /car_marker_publisher ⟵ /cmd/steer → /car_marker.
+
+</details>
+
+---
+
 ## Key Features
 
 | Package | Main Functions | Language |
