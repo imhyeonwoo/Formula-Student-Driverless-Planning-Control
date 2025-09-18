@@ -39,13 +39,6 @@ ament_target_dependencies(pure_pursuit_adaptive_node
   rclcpp std_msgs nav_msgs visualization_msgs geometry_msgs tf2_ros tf2_geometry_msgs
 )
 
-# 3.5) constant command publisher (/cmd/speed, /cmd/rpm)
-add_executable(constant_cmd_publisher
-  src/constant_cmd_publisher.cpp
-)
-ament_target_dependencies(constant_cmd_publisher
-  rclcpp std_msgs
-)
 
 # 4) predictive pure pursuit
 # add_executable(pure_pursuit_predictive_node 
@@ -59,7 +52,6 @@ install(TARGETS
   pure_pursuit_static
   pure_pursuit_dynamic
   pure_pursuit_adaptive_node
-  constant_cmd_publisher
   DESTINATION lib/${PROJECT_NAME})
 
 install(DIRECTORY config

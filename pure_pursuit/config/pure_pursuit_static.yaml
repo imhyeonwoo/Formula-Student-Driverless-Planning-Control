@@ -23,24 +23,5 @@ pure_pursuit_static:
     marker_g: 1.00
     marker_b: 0.80
 
-# Parameters for the optional constant command publisher
-# Launch file will load this when `use_constant_cmd:=true`.
-constant_cmd_publisher:
-  ros__parameters:
-    # Topics to publish
-    speed_topic: "/cmd/speed"   # std_msgs/Float32 (m/s)
-    rpm_topic: "/cmd/rpm"       # std_msgs/Float32 (rpm)
-
-    # Publish rate
-    publish_rate_hz: 50.0
-
-    # Constant values (edit as needed)
-    # rpm_value = speed_value / rpm_divisor (e.g., 0.00535)
-    speed_value: 3.0                 # m/s (상수 속도)
-    rpm_value: 0.0                   # rpm (used only if rpm_from_speed=false)
-    rpm_from_speed: true             # compute rpm from speed_value
-    rpm_divisor: 0.00535             # rpm = speed_value / rpm_divisor
-
-    # Enable/disable individual publishers
-    publish_speed: true
-    publish_rpm: true
+## Note: Speed/RPM commands are handled by local_speed_planner.
+## No constant_cmd_publisher section is needed in pure_pursuit configs.

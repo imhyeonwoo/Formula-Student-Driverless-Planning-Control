@@ -25,7 +25,7 @@ pure_pursuit_adaptive:
     # Target selection
     use_arc_length_selection: true
     x_forward_only: true      # (참고) 이제 s-기반 선택이라 영향은 적지만 유지
-    forward_margin_x: -0.2
+    forward_margin_x: -0.1
 
     # Outer-offset (pd -> pl)
     outer_offset_enable: true
@@ -86,22 +86,5 @@ pure_pursuit_adaptive:
     color_cir_g: 1.00
     color_cir_b: 1.00
 
-constant_cmd_publisher:
-  ros__parameters:
-    # Topics to publish
-    speed_topic: "/cmd/speed"   # std_msgs/Float32 (m/s)
-    rpm_topic: "/cmd/rpm"       # std_msgs/Float32 (rpm)
-
-    # Publish rate
-    publish_rate_hz: 50.0
-
-    # Constant values (edit as needed)
-    # rpm_value = speed_value / rpm_divisor (e.g., 0.00535)
-    speed_value: 3.0                 # m/s
-    rpm_value: 0.0                   # rpm (used only if rpm_from_speed=false)
-    rpm_from_speed: true             # compute rpm from speed_value
-    rpm_divisor: 0.00535             # rpm = speed_value / rpm_divisor
-
-    # Enable/disable individual publishers
-    publish_speed: true
-    publish_rpm: true
+## Note: Speed/RPM commands are handled by local_speed_planner.
+## No constant_cmd_publisher section is needed in pure_pursuit configs.
