@@ -6,9 +6,10 @@ import os
 
 def generate_launch_description():
     pkg_share = get_package_share_directory('pure_pursuit')
-    # Param file (current default)
+    # Param file
     param_file = os.path.join(pkg_share, 'config', 'adaptive_steering_course.yaml')
-    # param_file = os.path.join(pkg_share, 'config', 'adaptive_pp.yaml')
+    # param_file = os.path.join(pkg_share, 'config', 'adaptive_accel_course.yaml')
+    # param_file = os.path.join(pkg_share, 'config', 'adaptive_full_course.yaml')
 
     return LaunchDescription([
         Node(
