@@ -19,8 +19,8 @@ pure_pursuit_adaptive:
     use_curvature_term: true
     k_curv: 0.05
     epsilon_kappa: 0.02
-    Ld_min: 4.2
-    Ld_max: 5.5
+    Ld_min: 5.5
+    Ld_max: 9.0
 
     # Target selection
     use_arc_length_selection: true
@@ -28,7 +28,7 @@ pure_pursuit_adaptive:
     forward_margin_x: -0.1
 
     # Outer-offset (pd -> pl)
-    outer_offset_enable: true
+    outer_offset_enable: false
     alpha_max_m: 3.0
     beta_max: 3.0
     curv_window_m: 2.0

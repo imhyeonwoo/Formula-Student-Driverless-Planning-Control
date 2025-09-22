@@ -2,7 +2,7 @@ pure_pursuit_adaptive:
   ros__parameters:
     # I/O
     path_topic: "/local_planned_path"
-    speed_topic: "/current_speed"
+    speed_topic: "/ctrl/speed"
     # GPS-IMU Fusion으로 구한 속도 : /current_speed/odom
     # 하드웨어 제어에서 발행하는 모터 속도 : /ctrl/speed
     steer_topic: "/cmd/steer"
@@ -25,18 +25,18 @@ pure_pursuit_adaptive:
     # Target selection
     use_arc_length_selection: true
     x_forward_only: true      # (참고) 이제 s-기반 선택이라 영향은 적지만 유지
-    forward_margin_x: -0.2
+    forward_margin_x: -0.1
 
     # Outer-offset (pd -> pl)
     outer_offset_enable: true
     alpha_max_m: 3.0
     beta_max: 3.0
     curv_window_m: 2.0
-    outer_offset_max_m: 1.0
-    outer_offset_tau_max: 0.7
+    outer_offset_max_m: 0.6   # 바깥 이동 최대값. 줄이면 pl이 바깥으로 밀리는 상한이 줄어듦.
+    outer_offset_tau_max: 0.7 # 값을 낮추면: 코너에서 pl이 바깥으로 덜 밀림(보수적). 값을 높이면: 바깥 오프셋이 더 자주/크게 발생(공격적).
     outer_offset_kappa_gate: 0.03
     track_half_width_m: 2.5   # 트랙 폭의 절반
-    track_margin_m: 0.2       # 차량이 트랙 경계에 너무 가까이 가지 않도록 마진
+    track_margin_m: 0.3       # 차량이 트랙 경계에 너무 가까이 가지 않도록 마진
 
     # Command shaping
     publish_rate_hz: 50.0
@@ -75,7 +75,7 @@ pure_pursuit_adaptive:
     color_pl_b: 0.80
 
     color_tan_r: 1.00
-    color_tan_g: 0.85
+    color_tan_g: 0.00
     color_tan_b: 0.10
 
     color_vec_r: 0.00
@@ -85,3 +85,6 @@ pure_pursuit_adaptive:
     color_cir_r: 1.00
     color_cir_g: 1.00
     color_cir_b: 1.00
+
+## Note: Speed/RPM commands are handled by local_speed_planner.
+## No constant_cmd_publisher section is needed in pure_pursuit configs.
