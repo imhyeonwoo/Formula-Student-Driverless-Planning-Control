@@ -41,10 +41,10 @@ class ConeVisualizer(Node):
 
         # Group cones by color string
         groups = {
-            'Blue Cone': [],
-            'Yellow Cone': [],
-            'Red Cone': [],
-            'Other': [],
+            'blue cone': [],
+            'yellow cone': [],
+            'red cone': [],
+            'unknown': [],
         }
         for c in msg.cones:
             color = getattr(c, 'color', '')
@@ -80,10 +80,10 @@ class ConeVisualizer(Node):
         def col(r, g, b, a):
             return ColorRGBA(r=float(r), g=float(g), b=float(b), a=float(a))
 
-        add_spheres('cones_blue',   0, groups['Blue Cone'],   col(0.10, 0.60, 1.00, alpha))
-        add_spheres('cones_yellow', 1, groups['Yellow Cone'], col(1.00, 0.85, 0.10, alpha))
-        add_spheres('cones_red',    2, groups['Red Cone'],    col(1.00, 0.20, 0.20, alpha))
-        add_spheres('cones_other',  3, groups['Other'],       col(0.70, 0.70, 0.70, alpha))
+        add_spheres('cones_blue',   0, groups['blue cone'],   col(0.10, 0.60, 1.00, alpha))
+        add_spheres('cones_yellow', 1, groups['yellow cone'], col(1.00, 0.85, 0.10, alpha))
+        add_spheres('cones_red',    2, groups['red cone'],    col(1.00, 0.20, 0.20, alpha))
+        add_spheres('cones_other',  3, groups['unknown'],       col(0.70, 0.70, 0.70, alpha))
 
         if show_ids:
             # Publish a few text labels (optional, can be heavy if too many)

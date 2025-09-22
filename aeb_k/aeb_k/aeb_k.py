@@ -65,7 +65,7 @@ class AEB(Node):
             return
         self.red_cone = []
         for cone in msg.cones:
-            if getattr(cone, "color", "") == "Red Cone":
+            if getattr(cone, "color", "") == "red cone":
                 x, y, z = cone.position.x, cone.position.y, cone.position.z
                 self.red_cone.append((x, y, z))
 

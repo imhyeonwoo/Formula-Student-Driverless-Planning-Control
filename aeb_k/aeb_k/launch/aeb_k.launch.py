@@ -9,7 +9,8 @@ def generate_launch_description():
             name='AEB_Determination_Node',
             output='screen',
             parameters=[{
-                'topic': '/cone/fused/ukf',   # align with cone_visualizer default
+                # 'topic': '/cone/fused/ukf',   # align with cone_visualizer default
+                'topic': '/cone/fused',
                 # Tune thresholds/ROI via launch if needed
                 # 'aeb_thresh': 10,
                 # 'aeb_hor': 6.0,
