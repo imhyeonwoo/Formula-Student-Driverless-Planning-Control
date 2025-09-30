@@ -209,7 +209,7 @@ ros2 launch pure_pursuit adaptive_pure_pursuit.launch.py
 ### Several Attempts for Better Planning and Tracking
 
 <p align="center">
-  <img src="docs/images/9 adaptive pure pursuit.gif" width="70%"/><br>
+  <img src="docs/images/9adaptive pure pursuit.gif" width="70%"/><br>
   <span style="font-size:20px; font-weight:bold;">Adaptive Pure Pursuit</span>
 </p>
 
