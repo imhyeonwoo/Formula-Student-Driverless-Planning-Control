@@ -233,8 +233,8 @@ ros2 launch pure_pursuit adaptive_pure_pursuit.launch.py
 ---
 
 <div align="center">
-  <img src="docs/images/attempts/potential field1.gif" width="45%" />
-  <img src="docs/images/attempts/potential field2.gif" width="45%" />
+  <img src="docs/images/attempts/potential field1.gif" width="40%" />
+  <img src="docs/images/attempts/potential field2.gif" width="50%" />
   <br>
   <span style="font-size:20px; font-weight:bold;">Potential Field-Based Local Path Planning</span>
 </div>
