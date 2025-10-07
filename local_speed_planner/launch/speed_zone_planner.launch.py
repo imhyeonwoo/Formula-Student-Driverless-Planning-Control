@@ -10,8 +10,8 @@ def generate_launch_description():
     pkg_name = 'local_speed_planner'
     share_dir = get_package_share_directory(pkg_name)
     # config_path = os.path.join(share_dir, 'config', 'steering_course.yaml') # 조향 코스
-    config_path = os.path.join(share_dir, 'config', 'accel_course.yaml')  # 가속 코스
-    # config_path = os.path.join(share_dir, 'config', 'full_course.yaml')   # 종합 주행
+    # config_path = os.path.join(share_dir, 'config', 'accel_course.yaml')  # 가속 코스
+    config_path = os.path.join(share_dir, 'config', 'full_course.yaml')   # 종합 주행
 
     path_sampler_node = Node(
         package=pkg_name,

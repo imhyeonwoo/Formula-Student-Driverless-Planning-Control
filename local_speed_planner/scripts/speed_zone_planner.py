@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 import rclpy
 from rclpy.node import Node
-from std_msgs.msg import Float32
+from std_msgs.msg import Float32, UInt8
 
 
 class SpeedZonePlanner(Node):
@@ -14,6 +14,9 @@ class SpeedZonePlanner(Node):
         # New: RPM publishing params
         self.declare_parameter('rpm_topic', '/cmd/rpm')
         self.declare_parameter('publish_rpm', True)
+        # AEB override params
+        self.declare_parameter('aeb_topic', '/aeb')
+        self.declare_parameter('enforce_aeb_stop', True)
         # Conversion: v[m/s] = RPM_motor * rpm_divisor  =>  RPM = v / rpm_divisor
         # Derived from: RPM_wheel = RPM_motor / 4.6, circumference = pi * 0.47 m
         # v = RPM_motor * (1/4.6) * (1/60) * (pi * 0.47) ≈ RPM_motor * 0.00535 [m/s]
@@ -44,6 +47,9 @@ class SpeedZonePlanner(Node):
         self.rpm_topic = self.get_parameter('rpm_topic').value
         self.publish_rpm = bool(self.get_parameter('publish_rpm').value)
         self.rpm_divisor = float(self.get_parameter('rpm_divisor').value)
+        # AEB params
+        self.aeb_topic = self.get_parameter('aeb_topic').value
+        self.enforce_aeb_stop = bool(self.get_parameter('enforce_aeb_stop').value)
 
         self.thr_hm_enter = float(self.get_parameter('thr_hm_enter').value)
         self.thr_ml_enter = float(self.get_parameter('thr_ml_enter').value)
@@ -65,6 +71,7 @@ class SpeedZonePlanner(Node):
         self.zone = None  # 'HIGH'|'MID'|'LOW'
         self.last_zone_change = self.get_clock().now()
         self.speed_cmd = 0.0
+        self.aeb_active = False
 
         # ROS I/O
         self.sub = self.create_subscription(Float32, self.topic_in, self.on_kappa, 10)
@@ -72,6 +79,8 @@ class SpeedZonePlanner(Node):
         self.pub_rpm = None
         if self.publish_rpm:
             self.pub_rpm = self.create_publisher(Float32, self.rpm_topic, 10)
+        # AEB subscriber
+        self.sub_aeb = self.create_subscription(UInt8, self.aeb_topic, self.on_aeb, 10)
 
         period = 1.0 / max(self.publish_rate_hz, 1.0)
         self.timer = self.create_timer(period, self.on_timer)
@@ -116,7 +125,23 @@ class SpeedZonePlanner(Node):
             self.last_zone_change = now
             # self.get_logger().info(f"Zone -> {self.zone} (kappa={k:.3f})")
 
+    def on_aeb(self, msg: UInt8):
+        # AEB active when data >= 1
+        self.aeb_active = int(msg.data) >= 1
+        # Optionally, reset ramp state when AEB engages
+        if self.aeb_active:
+            self.speed_cmd = 0.0
+
     def on_timer(self):
+        # AEB override: force outputs to zero regardless of zone/data
+        if self.enforce_aeb_stop and self.aeb_active:
+            zero = Float32(); zero.data = 0.0
+            self.pub.publish(zero)
+            if self.publish_rpm and self.pub_rpm is not None:
+                zero_rpm = Float32(); zero_rpm.data = 0.0
+                self.pub_rpm.publish(zero_rpm)
+            return
+
         # Determine target speed by zone
         if self.zone == 'HIGH':
             target = self.v_high
