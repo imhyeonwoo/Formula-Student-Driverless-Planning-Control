@@ -18,9 +18,12 @@ qos.reliability = ReliabilityPolicy.BEST_EFFORT
 
 # =================== 전역 파라미터 =================== #
 #----- AEB (defaults; can be overridden via params) -----#
-AEB_THRESH = 4   # 빨간콘 몇 개 이상일 때 AEB 작동시킬지
+AEB_THRESH = 4    # 빨간콘 몇 개 이상일 때 AEB 작동시킬지
 AEB_HOR = 6.0     # AEB 작동 영역의 좌우 반폭(Horizontal)
 AEB_VER = 9.0     # AEB 작동 영역의 앞쪽 길이(Vertical)
+# ROI 시작 x (base_link 기준). 음수면 차량 뒤쪽 방향.
+# 요청대로 기본값을 -2.0 m로 설정하여 Zone을 2 m 뒤로 이동.
+AEB_X_START = -2.0
 
 #=====================================================#
 
@@ -33,11 +36,17 @@ class AEB(Node):
         self.declare_parameter('aeb_thresh', AEB_THRESH)
         self.declare_parameter('aeb_hor', AEB_HOR)
         self.declare_parameter('aeb_ver', AEB_VER)
+        self.declare_parameter('aeb_x_start', AEB_X_START)
 
         self.topic = self.get_parameter('topic').get_parameter_value().string_value
         self.aeb_thresh = int(self.get_parameter('aeb_thresh').get_parameter_value().integer_value)
         self.aeb_hor = float(self.get_parameter('aeb_hor').get_parameter_value().double_value)
         self.aeb_ver = float(self.get_parameter('aeb_ver').get_parameter_value().double_value)
+        self.aeb_x_start = float(self.get_parameter('aeb_x_start').get_parameter_value().double_value)
+
+        # Startup log to verify effective ROI params
+        self.get_logger().info(
+            f"AEB params: th={self.aeb_thresh}, hor={self.aeb_hor}, ver={self.aeb_ver}, x_start={self.aeb_x_start}")
 
         ###### Subscriber ######
         self.red_sub = self.create_subscription(
@@ -74,8 +83,10 @@ class AEB(Node):
     #=======================
     def determine_aeb(self, cone: List[Tuple[float, float, float]]):
         n_red = 0
+        x_min = self.aeb_x_start
+        x_max = self.aeb_x_start + self.aeb_ver
         for x, y, z in cone:
-            if 0.0 <= x <= self.aeb_ver and -self.aeb_hor <= y <= self.aeb_hor:
+            if x_min <= x <= x_max and -self.aeb_hor <= y <= self.aeb_hor:
                 n_red += 1
         aebmsg = UInt8()
         # Trigger when count meets or exceeds threshold
@@ -84,7 +95,7 @@ class AEB(Node):
         # Debug (throttled) — shows ROI count and output
         if (self.get_clock().now().nanoseconds // 1_000_000_000) % 1 == 0:
             self.get_logger().debug(
-                f"AEB ROI count={n_red} (th={self.aeb_thresh}) -> {aebmsg.data}")
+                f"AEB ROI x:[{x_min:.2f},{x_max:.2f}], y:[{-self.aeb_hor:.2f},{self.aeb_hor:.2f}] count={n_red} (th={self.aeb_thresh}) -> {aebmsg.data}")
         return aebmsg.data
 
     #=======================
@@ -118,7 +129,7 @@ class AEB(Node):
         marker.scale.x = self.aeb_ver
         marker.scale.y = 2 * self.aeb_hor
         marker.scale.z = 0.1
-        marker.pose.position.x = self.aeb_ver / 2.0
+        marker.pose.position.x = self.aeb_x_start + (self.aeb_ver / 2.0)
         marker.pose.position.y = 0.0
         marker.pose.position.z = 0.1
         marker.pose.orientation.w = 1.0

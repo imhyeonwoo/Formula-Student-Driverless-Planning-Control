@@ -10,7 +10,6 @@ def generate_launch_description():
             name='cone_visualizer',
             output='screen',
             parameters=[{
-                # 'topic': '/cone/fused/ukf',   # align with cone_visualizer default
                 'topic': '/cone/fused',
                 'frame_id_override': '',
                 'scale': 0.3,
