@@ -39,19 +39,19 @@ ament_target_dependencies(pure_pursuit_adaptive_node
   rclcpp std_msgs nav_msgs visualization_msgs geometry_msgs tf2_ros tf2_geometry_msgs
 )
 
-
-# 4) predictive pure pursuit
-# add_executable(pure_pursuit_predictive_node 
-#   src/pure_pursuit_predictive.cpp
-# )
-# ament_target_dependencies(pure_pursuit_predictive_node
-#   rclcpp std_msgs nav_msgs visualization_msgs geometry_msgs tf2_ros tf2_geometry_msgs
-# )
+# 4) damped static look-ahead distance pure pursuit
+add_executable(pure_pursuit_static_damped 
+  src/pure_pursuit_static_damped.cpp
+)
+ament_target_dependencies(pure_pursuit_static_damped 
+  rclcpp std_msgs nav_msgs visualization_msgs
+)
 
 install(TARGETS 
   pure_pursuit_static
   pure_pursuit_dynamic
   pure_pursuit_adaptive_node
+  pure_pursuit_static_damped
   DESTINATION lib/${PROJECT_NAME})
 
 install(DIRECTORY config

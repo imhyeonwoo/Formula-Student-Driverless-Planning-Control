@@ -1,0 +1,36 @@
+pure_pursuit_static_damped:
+  ros__parameters:
+    # Topics
+    path_topic: "/local_planned_path"                      # nav_msgs/Path (frame_id=base_link)
+    steer_topic: "/cmd/steer"                           # std_msgs/Float32 (deg, 좌회전 +)
+    lookahead_marker_topic: "/lookahead_point_marker" # visualization_msgs/Marker
+
+    # Vehicle
+    wheelbase_m: 1.3
+
+    # Static Look-Ahead Distance
+    lookahead_m: 11.0
+
+    # Limits / behavior
+    publish_rate_hz: 50.0
+    steer_limit_deg: 30.0          # 조향 한계 [deg]
+    use_x_forward_only: true       # x>0인 점만 룩어헤드 후보로 사용
+
+    # D-term (heading error rate)
+    enable_d_term: true
+    kd_heading_rate: 0.15          # [s] 작게 시작하여 튜닝
+    deriv_lpf_tau: 0.20            # [s] 1차 LPF 시간상수
+
+    # Output sign convention (호환성)
+    invert_steer_sign: true        # true면 publish 시 -1 곱함(우:+, 좌:-)
+
+    # Marker (mint color)
+    marker_scale: 0.50
+    marker_alpha: 1.0
+    marker_r: 0.00
+    marker_g: 1.00
+    marker_b: 0.00
+
+## Note: Speed/RPM commands are handled by local_speed_planner.
+## No constant_cmd_publisher section is needed in pure_pursuit configs.
+
