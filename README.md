@@ -13,7 +13,7 @@ Watch the Demo**
 ---
 
 <details>
-<summary><b><span style="font-size: 1.4em">📁 Project Structure</span></b></summary>
+<summary><b><span style="font-size: 1.1em">📁 Project Structure</span></b></summary>
 
 
 ```text
@@ -87,7 +87,7 @@ Planning/
 ---
 
 <details>
-  <summary><b><span style="font-size: 1.4em">📈 Ideal rqt graph</span></b></summary>
+  <summary><b><span style="font-size: 1.1em"> Ideal rqt graph</span></b></summary>
 
   <img src="docs/images/Planning_rqt-graph.png" alt="Planning rqt graph" />
 
@@ -149,7 +149,7 @@ ros2 launch pure_pursuit adaptive_pure_pursuit.launch.py
 
 ---
 
-### 📹 Demo Video (Main)
+### Demo Video (Main)
 
 <table>
   <tr>
@@ -282,6 +282,20 @@ ros2 launch pure_pursuit adaptive_pure_pursuit.launch.py
   
 </ul>
 
+---
+
+## ROS Bag Files (Download)
+
+You can **reproduce the reference pipeline immediately** using the sample bag files below (Google Drive):
+
+- **Curve section**: https://drive.google.com/drive/folders/1smqId70MtuKinn6FSc2SYskNgCNc_TE2?usp=sharing  
+  - Driving data(including cone topics) collected on track segments with **several curves**
+
+- **Straight section**: https://drive.google.com/drive/folders/1rNyuKDwBvFl_HvaT3qoHntzvx84Ndx5d?usp=sharing  
+  - Driving data(including cone topics) collected on **straight-dominant** segments
+
+- **GPS+IMU–focused bags**: https://drive.google.com/drive/folders/19wzDIm6VciQ7x5rul0CGEnw3SJ7GRCzu?usp=sharing  
+  - Data where **RTK-GPS and IMU topics are the main sources** (for reproducing global/local path generation and pose estimation)
 
 ---
 
@@ -309,7 +323,4 @@ ros2 launch pure_pursuit adaptive_pure_pursuit.launch.py
 ## Contributions & Contact
 
 - imhyeonwoo21@gmail.com
-- imhyeonwoo21@konkuk.ac.kr
-- https://www.youtube.com/@hwi4201
-
-- I can send you bag files I used if you want
+- https://www.youtube.com/@hwi1_0_0_1
