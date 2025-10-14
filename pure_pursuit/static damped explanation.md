@@ -1,7 +1,7 @@
 # Pure Pursuit — Static Look-Ahead with Damping 노드 설명서
 
 > 노드 이름: **`pure_pursuit_static_damped`**  
-> 목적: 고정 Look-Ahead Distance(정적 Ld)에 **헤딩오차 변화율 D항**을 더해, 진동 억제/응답 개선된 조향 명령(`/cmd/steer_sp`, 단위 **deg**) 퍼블리시
+> 목적: 고정 Look-Ahead Distance(정적 Ld)에 **헤딩오차 변화율 D항**을 더해, 진동 억제/응답 개선된 조향 명령(`/cmd/steer`, 단위 **deg**) 퍼블리시
 
 ---
 
@@ -13,8 +13,8 @@
 - 입력
   - `nav_msgs/Path` : `/local_planned_path` (권장 프레임: `base_link`)
 - 출력
-  - `std_msgs/Float32` : `steer_topic` (기본 `/cmd/steer_sp`, 단위: **deg**)
-  - `visualization_msgs/Marker` : `lookahead_marker_topic` (기본 `/lookahead_point_marker_damped`)
+  - `std_msgs/Float32` : `steer_topic` (기본 `/cmd/steer`, 단위: **deg**)
+  - `visualization_msgs/Marker` : `lookahead_marker_topic` (기본 `/lookahead_point_marker`)
 
 ---
 
@@ -24,16 +24,16 @@
 
 경로상의 룩어헤드 목표점 \(p=(x, y)\)에서 기본 조향각(rad):
 
-\[\delta_{\mathrm{pp}} = \mathrm{atan2}\!\left(\frac{2 L \, y}{x^2+y^2}\right),\quad \delta_{\deg} = \delta_{\mathrm{pp}}\cdot\frac{180}{\pi}\]
+$$\delta_{\mathrm{pp}} = \mathrm{atan2}\!\left(\frac{2 L \, y}{x^2+y^2}\right),\quad \delta_{\deg} = \delta_{\mathrm{pp}}\cdot\frac{180}{\pi}$$
 
-여기서 \(L\)은 휠베이스, \(x,y\)는 `base_link` 기준 목표점 좌표입니다.
+여기서 $L$은 휠베이스, ($x$,$y$)는 `base_link` 기준 목표점 좌표입니다.
 
 ### 2) 헤딩오차 변화율 D항 추가
 
-- 헤딩오차 \(\alpha = \mathrm{atan2}(y, x)\)
-- 시간 미분을 1차 LPF(시간상수 `deriv_lpf_tau`)로 안정화한 후, \(k_d\)를 곱해 기본 조향에 더합니다.
+- 헤딩오차 $\alpha = \mathrm{atan2}(y, x)$
+- 시간 미분을 1차 LPF(시간상수 `deriv_lpf_tau`)로 안정화한 후, $k_d$를 곱해 기본 조향에 더합니다.
 
-\[\delta = \delta_{\mathrm{pp}} + k_d\,\dot{\alpha}_{\mathrm{LPF}}\]
+$$\delta = \delta_{\mathrm{pp}} + k_d\,\dot{\alpha}_{\mathrm{LPF}}$$
 
 이로써 코너 진입 시 과도한 조향을 누그러뜨리거나, 급격한 방향 변화에 대한 응답을 부드럽게 만들 수 있습니다.
 
@@ -99,40 +99,11 @@ pure_pursuit_static_damped:
 
 ## 알고리즘 플로우
 
-1. **룩어헤드 포인트 선택**: \(\|p\| \ge L_d\) (고정 `lookahead_m`), 옵션으로 `x>0`만 후보
-2. **기본 조향 계산**: \(\delta_{\mathrm{pp}}\) (rad) → deg 변환
-3. **D항 계산**: \(\alpha=\mathrm{atan2}(y,x)\)의 시간 변화율 → 1차 LPF → `kd_heading_rate` 곱해 가산
+1. **룩어헤드 포인트 선택**: $\|p\| \ge L_d$ (고정 `lookahead_m`), 옵션으로 `x>0`만 후보
+2. **기본 조향 계산**: $\delta_{\mathrm{pp}}$ (rad) → deg 변환
+3. **D항 계산**: $\alpha=\mathrm{atan2}(y,x)$의 시간 변화율 → 1차 LPF → `kd_heading_rate` 곱해 가산
 4. **제한/부호**: `steer_limit_deg` 클램프, 필요 시 `invert_steer_sign` 적용 후 퍼블리시
 5. **시각화**: 룩어헤드 포인트를 마커로 퍼블리시
-
----
-
-## 빌드 & 실행
-
-### CMakeLists.txt (발췌)
-```cmake
-add_executable(pure_pursuit_static_damped src/pure_pursuit_static_damped.cpp)
-ament_target_dependencies(pure_pursuit_static_damped
-  rclcpp std_msgs nav_msgs visualization_msgs
-)
-install(TARGETS pure_pursuit_static_damped
-  DESTINATION lib/${PROJECT_NAME})
-```
-
-### Launch
-`launch/pure_pursuit_static_damped.launch.py` 사용:
-```bash
-# 빌드
-colcon build --packages-select pure_pursuit
-source install/setup.bash
-
-# 기본 파라미터로 실행
-ros2 launch pure_pursuit pure_pursuit_static_damped.launch.py
-
-# 사용자 yaml로 실행
-ros2 launch pure_pursuit pure_pursuit_static_damped.launch.py \
-  params_file:=$COLCON_WS/src/Planning/pure_pursuit/config/pure_pursuit_static_damped.yaml
-```
 
 ---
 
