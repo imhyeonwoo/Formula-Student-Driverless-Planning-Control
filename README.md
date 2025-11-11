@@ -7,7 +7,8 @@ It implements a full ROS2 stack that plans **global paths from GPS data**,  gene
 
  **<img src="https://upload.wikimedia.org/wikipedia/commons/4/42/YouTube_icon_%282013-2017%29.png" alt="YouTube" width="20" style="vertical-align:middle;">
 Watch the Demo**  
-- [On-road Test](https://youtube.com/shorts/4p9Xr07viQY)  
+- [On-road Test](https://youtube.com/shorts/4p9Xr07viQY)
+- [First-person (POV) driving video](https://youtube.com/shorts/dZaAwIC6p0k)
 - [Debug Visualization(RViz+Plotjuggler)](https://youtu.be/WpDWq2Yr9X8) 
 
 ---
