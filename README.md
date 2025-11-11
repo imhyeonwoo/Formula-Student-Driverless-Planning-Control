@@ -309,6 +309,7 @@ You can **reproduce the reference pipeline immediately** using the sample bag fi
 | GPS RTK Module            | ZED-F9P-04B-01            |
 | IMU Module            | myAHRS+            |
 | Languages            | Python 3.10 / C++17    |
+| Localization Stack | [ros2-gnss-imu-fusion](https://github.com/imhyeonwoo/ros2-gnss-imu-fusion) |
 
 ---
 
